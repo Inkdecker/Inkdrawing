@@ -1,0 +1,15 @@
+__pycache__/
+build/
+dist/
+presets/images_presets/
+presets/session_presets/
+
+git config --list
+
+1_spec_file.bat
+2_exe_packing.bat
+compile_main_window.bat
+compile_ressources.bat
+save_output.txt
+session_drawing.spec
+session_drawing_copy.spec.txt
