@@ -30,6 +30,8 @@ from session_display import Ui_session_display
 import resources_config_rc  # This line should match your generated resource file name
 import sip
 
+from send2trash import send2trash
+
 
 
 class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
@@ -429,7 +431,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
                         "flip_horizontal_button", "flip_vertical_button",
                         "previous_image", "pause_timer", "stop_session",
                         "next_image", "copy_image_path_button",
-                        "open_folder_button", "show_main_window_button"
+                        "open_folder_button","delete_image_button","show_main_window_button"
                     ]
                     for button_name in button_names:
                         if hasattr(session, button_name):
@@ -1230,6 +1232,8 @@ class SessionDisplay(QWidget, Ui_session_display):
         self.vertical_lines_grid = 4
         self.horizontal_lines_grid = 4
 
+        self.setWindowFlags(QtCore.Qt.FramelessWindowHint)
+
         # Create the border overlay QLabel
         self.border_overlay = QLabel(self)
         self.border_overlay.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents)
@@ -1293,13 +1297,34 @@ class SessionDisplay(QWidget, Ui_session_display):
 
         # Check if the image path exists
         if os.path.exists(current_image_path):
-            # Normalize path to ensure compatibility
 
             # Using os.startfile to open the folder and select the image
             subprocess.Popen(f'explorer /select,"{current_image_path}"')
             print(f"Opened folder containing: {current_image_path}")
         else:
             print("Image path does not exist.")
+
+    def delete_image(self):
+        # Retrieve the current image path
+        current_image_path = os.path.normpath(self.playlist[self.playlist_position]) 
+
+        # Check if the image path exists
+        if os.path.exists(current_image_path):
+
+            # Using send2trash to send image to recycle bin
+            send2trash(current_image_path)
+
+            #Delete item from playlist
+            self.playlist.pop(self.playlist_position)
+            self.playlist_position -= 1
+            self.load_next_image()
+
+
+            print(f"Image deleted : {current_image_path}")
+
+        else:
+            print("Image path does not exist.")
+
 
 
 
@@ -1421,6 +1446,8 @@ class SessionDisplay(QWidget, Ui_session_display):
         self.copy_image_path_button.clicked.connect(self.copy_image_path)
         self.open_folder_button.clicked.connect(self.open_image_folder)
 
+        self.delete_image_button.clicked.connect(self.delete_image)
+
     def init_shortcuts(self):
 
         # Resize
@@ -1439,6 +1466,12 @@ class SessionDisplay(QWidget, Ui_session_display):
         self.copy_key = QShortcut(QtGui.QKeySequence('C'), self)
         self.copy_key.activated.connect(self.copy_image_path)
 
+
+        # Delete Image
+        self.copy_key = QShortcut(QtGui.QKeySequence('Ctrl+D'), self)
+        self.copy_key.activated.connect(self.delete_image)
+
+
         # Grayscale
         self.quit_key = QShortcut(QtGui.QKeySequence('F'), self)
         self.quit_key.activated.connect(self.grayscale)
@@ -1448,6 +1481,7 @@ class SessionDisplay(QWidget, Ui_session_display):
         # Grid settings shortcut
         self.grid_settings_shortcut = QShortcut(QtGui.QKeySequence('Ctrl+G'), self)
         self.grid_settings_shortcut.activated.connect(self.open_grid_settings_dialog)
+
         # Display grid
         self.quit_key = QShortcut(QtGui.QKeySequence('G'), self)
         self.quit_key.activated.connect(self.toggle_grid)

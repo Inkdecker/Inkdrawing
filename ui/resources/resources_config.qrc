@@ -1,27 +1,30 @@
-<?xml version="1.0" ?>
 <RCC>
   <qresource prefix="icons">
-    <file>arrow left.png</file>
-    <file>arrow right.png</file>
-    <file>copy-icon.png</file>
-    <file>DARK-32x32.ico</file>
-    <file>DARK-32x32.png</file>
-    <file>flip horizontal.png</file>
-    <file>flip vertical.png</file>
-    <file>folder-icon.png</file>
-    <file>folder.png</file>
-    <file>grayscale.png</file>
-    <file>grid_icon.png</file>
-    <file>lock_scale.png</file>
-    <file>Pause.png</file>
-    <file>setting.png</file>
-    <file>settings.png</file>
-    <file>Square.png</file>
-    <file>theme.png</file>
-    <file>theme_icon_2.png</file>
-    <file>theme_icon_3.png</file>
-    <file>theme_icon_4.png</file>
-    <file>_Blank.ico</file>
-    <file>_Blank.png</file>
+    <file>icons/arrow left.png</file>
+    <file>icons/arrow right.png</file>
+    <file>icons/copy-icon.png</file>
+    <file>icons/DARK-32x32.ico</file>
+    <file>icons/DARK-32x32.png</file>
+    <file>icons/flip horizontal.png</file>
+    <file>icons/trash-can.png</file>
+    <file>icons/flip vertical.png</file>
+    <file>icons/folder-icon.png</file>
+    <file>icons/folder.png</file>
+    <file>icons/grayscale.png</file>
+    <file>icons/grid_icon.png</file>
+    <file>icons/lock_scale.png</file>
+    <file>icons/Pause.png</file>
+    <file>icons/setting.png</file>
+    <file>icons/settings.png</file>
+    <file>icons/Square.png</file>
+    <file>icons/theme.png</file>
+    <file>icons/theme_icon_2.png</file>
+    <file>icons/theme_icon_3.png</file>
+    <file>icons/theme_icon_4.png</file>
+    <file>icons/_Blank.ico</file>
+    <file>icons/_Blank.png</file>
+    <file>icons/_Blank.png</file>
+    <file>icons/bin.png</file>
   </qresource>
+
 </RCC>

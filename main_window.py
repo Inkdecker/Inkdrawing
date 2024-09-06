@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'C:\Users\PC\Desktop\ART TUTORIALS\SHORTCUTS & STUFF\GestureSesh\ui\main_window.ui'
+# Form implementation generated from reading ui file 'C:\Users\PC\Desktop\ART TUTORIALS\SHORTCUTS & STUFF\session_drawing\ui\main_window.ui'
 #
 # Created by: PyQt5 UI code generator 5.15.11
 #
@@ -85,7 +85,7 @@ class Ui_MainWindow(object):
         MainWindow.setFocusPolicy(QtCore.Qt.ClickFocus)
         MainWindow.setAcceptDrops(True)
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("C:\\Users\\PC\\Desktop\\ART TUTORIALS\\SHORTCUTS & STUFF\\GestureSesh\\ui\\resources/icons/DARK-32x32.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon.addPixmap(QtGui.QPixmap("C:\\Users\\PC\\Desktop\\ART TUTORIALS\\SHORTCUTS & STUFF\\session_drawing\\ui\\resources/icons/DARK-32x32.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         MainWindow.setWindowIcon(icon)
         MainWindow.setWindowOpacity(4.0)
         MainWindow.setToolTip("")
