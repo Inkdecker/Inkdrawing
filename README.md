@@ -23,7 +23,7 @@ This is a free tool to users can use to practice drawing using references from t
 
 
 # Usage
-[Download](https://github.com/Inkdecker/session_drawing/releases/download/1.0/session_drawing.exe) and run the executable, no installation needed.
+[Download](https://github.com/Inkdecker/session_drawing/releases/download/1.1/session_drawing.exe) and run the executable, no installation needed.
 
 
 
