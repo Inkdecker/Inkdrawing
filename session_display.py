@@ -14,13 +14,13 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_session_display(object):
     def setupUi(self, session_display):
         session_display.setObjectName("session_display")
-        session_display.resize(700, 725)
+        session_display.resize(625, 725)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Ignored, QtWidgets.QSizePolicy.Ignored)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(session_display.sizePolicy().hasHeightForWidth())
         session_display.setSizePolicy(sizePolicy)
-        session_display.setMinimumSize(QtCore.QSize(650, 1))
+        session_display.setMinimumSize(QtCore.QSize(625, 1))
         session_display.setMaximumSize(QtCore.QSize(16777215, 16777215))
         font = QtGui.QFont()
         font.setPointSize(15)
@@ -30,7 +30,7 @@ class Ui_session_display(object):
         session_display.setContextMenuPolicy(QtCore.Qt.NoContextMenu)
         session_display.setWindowTitle("")
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap(":/icons/icons/brush.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon.addPixmap(QtGui.QPixmap("C:\\Users\\PC\\Desktop\\ART TUTORIALS\\SHORTCUTS & STUFF\\session_drawing\\ui\\resources/icons/DARK-32x32.ico"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         session_display.setWindowIcon(icon)
         session_display.setStyleSheet("background: rgb(0,0,0)")
         self.verticalLayout = QtWidgets.QVBoxLayout(session_display)
@@ -357,23 +357,26 @@ class Ui_session_display(object):
     def retranslateUi(self, session_display):
         _translate = QtCore.QCoreApplication.translate
         self.session_info.setText(_translate("session_display", "{info}"))
-        self.grayscale_button.setToolTip(_translate("session_display", "Grayscale\n"
-"G"))
+        self.grid_button.setToolTip(_translate("session_display", "[G] Toggle grid, [CTRL + G] Grid settings"))
+        self.grayscale_button.setToolTip(_translate("session_display", "[F] Toggle grayscale"))
         self.grayscale_button.setShortcut(_translate("session_display", "G"))
-        self.flip_horizontal_button.setToolTip(_translate("session_display", "Flip horizontal\n"
-"F"))
+        self.lock_scale_button.setToolTip(_translate("session_display", "[R] Prevent rescaling of the window\""))
+        self.flip_horizontal_button.setToolTip(_translate("session_display", "[H] Horizontal Flip"))
         self.flip_horizontal_button.setShortcut(_translate("session_display", "H"))
-        self.flip_vertical_button.setToolTip(_translate("session_display", "Flip horizontal\n"
-"F"))
+        self.flip_vertical_button.setToolTip(_translate("session_display", "[V] Vertical Flip"))
         self.flip_vertical_button.setShortcut(_translate("session_display", "V"))
-        self.previous_image.setToolTip(_translate("session_display", "Previous image"))
+        self.previous_image.setToolTip(_translate("session_display", "[Left] Previous image"))
         self.previous_image.setShortcut(_translate("session_display", "Left"))
-        self.pause_timer.setToolTip(_translate("session_display", "Pause Timer"))
+        self.pause_timer.setToolTip(_translate("session_display", "[Space] Pause Timer"))
         self.pause_timer.setShortcut(_translate("session_display", "Space"))
-        self.stop_session.setToolTip(_translate("session_display", "Stop Session. Closes window."))
+        self.stop_session.setToolTip(_translate("session_display", "[Esc] Stop Session and closes window"))
         self.stop_session.setShortcut(_translate("session_display", "Esc"))
-        self.next_image.setToolTip(_translate("session_display", "Next Image"))
+        self.next_image.setToolTip(_translate("session_display", "[Right] Next Image"))
         self.next_image.setShortcut(_translate("session_display", "Right"))
+        self.copy_image_path_button.setToolTip(_translate("session_display", "[C] Copy image path to clipboard"))
+        self.open_folder_button.setToolTip(_translate("session_display", "[O] Open image folder"))
+        self.delete_image_button.setToolTip(_translate("session_display", "[Ctrl + D] Delete image"))
+        self.show_main_window_button.setToolTip(_translate("session_display", "[Tab] Open settings window"))
         self.timer_display.setText(_translate("session_display", "00:00"))
 import resources_config_rc
 
