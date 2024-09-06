@@ -18,12 +18,13 @@ This is a free tool to users can use to practice drawing using references from t
 	- Open image folder
 	- Images cache and large image downscaling
 	- Dark / Light themes + Custom themes compatibility
+ 	- File deletion (Deleted files are send to Recycle Bin)
 
 ##### Supported files :  .jpg, .jpeg, .png, .webp, .tiff, .jfif, .bmp
 
 
 # Usage
-[Download](https://github.com/Inkdecker/session_drawing/releases/download/1.0/session_drawing.exe) and run the executable, no installation needed.
+[Download](https://github.com/Inkdecker/session_drawing/releases/download/1.1/session_drawing.exe) and run the executable, no installation needed.
 
 
 
@@ -57,6 +58,7 @@ Pause | Spacebar
 Next Image | Right Arrow Key
 Copy image path | C
 Open image folder | O
+Delete image | Ctrl + D
 Open setting window | Tab
 Add 30s | Up Arrow Key
 Add 1 Minute | Ctrl + Up Arrow Key
