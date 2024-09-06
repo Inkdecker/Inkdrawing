@@ -58,6 +58,7 @@ Pause | Spacebar
 Next Image | Right Arrow Key
 Copy image path | C
 Open image folder | O
+Delete image | Ctrl + D
 Open setting window | Tab
 Add 30s | Up Arrow Key
 Add 1 Minute | Ctrl + Up Arrow Key
