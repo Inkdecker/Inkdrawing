@@ -18,6 +18,7 @@ This is a free tool to users can use to practice drawing using references from t
 	- Open image folder
 	- Images cache and large image downscaling
 	- Dark / Light themes + Custom themes compatibility
+ 	- File deletion (Deleted files are send to Recycle Bin)
 
 ##### Supported files :  .jpg, .jpeg, .png, .webp, .tiff, .jfif, .bmp
 
