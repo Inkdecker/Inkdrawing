@@ -495,10 +495,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
         # Get the selected row
         self.update_selection_cache()
 
-        # Generate an initial preset name
         preset_name = f'preset_{self.get_next_preset_number()}'
-
-        # Show the custom folder selector dialog
         dialog = MultiFolderSelector(self, preset_name)
 
         self.init_styles(dialog=dialog)
@@ -547,8 +544,20 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
                     'Success', f'{preset_name} : {len(checked_files["valid_files"])} file(s) saved to {preset_name}'
                 )
 
-            self.load_presets()
-            QTest.qWait(1000)
+                # Existing code to save the preset...
+
+        # Reload presets
+        self.load_presets()
+
+        # Find the row with the new preset by its name
+        rows = self.table_images_selection.rowCount()
+        for row in range(rows):
+            item = self.table_images_selection.item(row, 0)  # First column (Name)
+            if item and item.text() == preset_name:
+                self.table_images_selection.selectRow(row)
+                break
+
+        QTest.qWait(1000)
 
     def get_next_preset_number(self):
         preset_files = [f for f in os.listdir(self.images_presets_dir) if f.startswith('preset_') and f.endswith('.txt')]
@@ -637,7 +646,18 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
             # Show error message if saving fails
             self.show_info_message('Error', f"Failed to save preset. Error: {str(e)}")
 
+        
+        # Save the preset
         self.load_presets()
+
+        # Find the row with the new preset by its name
+        preset_name = f'session_presets_{next_number}'  # This matches the name used for saving the preset
+        rows = self.table_session_selection.rowCount()
+        for row in range(rows):
+            item = self.table_session_selection.item(row, 0)  # First column (Name)
+            if item and item.text() == preset_name:
+                self.table_session_selection.selectRow(row)
+                break
 
 
     def delete_images_files(self):
@@ -964,6 +984,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
         if  selected_session_row == -1 or  selected_image_row == -1:
             print("No valid images or session details found.")
             self.show()
+            print("Settings window opened")
             return
 
 
@@ -979,6 +1000,8 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
 
                 if not selected_images:
                     print("No valid images found after removing missing files.")
+                    self.show()
+                    print("Settings window opened")
                     return
         if selected_session_row != -1:
             # Fetch the session preset filename
@@ -1263,6 +1286,9 @@ class SessionDisplay(QWidget, Ui_session_display):
 
         # Connect the resize event to update the border overlay
         self.resizeEvent = self.update_border_overlay_geometry
+        self.setMinimumSize(QtCore.QSize(640, 1))
+
+
 
     def resizeEvent(self, event):
         super(SessionDisplay, self).resizeEvent(event)
@@ -1458,6 +1484,15 @@ class SessionDisplay(QWidget, Ui_session_display):
         self.always_on_top_key = QShortcut(QtGui.QKeySequence('A'), self)
         self.always_on_top_key.activated.connect(self.toggle_always_on_top)
 
+        # Horizontal flip
+        self.hflip_key = QShortcut(QtGui.QKeySequence('H'), self)
+        self.hflip_key.activated.connect(self.flip_horizontal)
+
+
+        # Vertical flip
+        self.vflip_key = QShortcut(QtGui.QKeySequence('V'), self)
+        self.vflip_key.activated.connect(self.flip_vertical)
+
 
         # Open image folder
         self.open_key = QShortcut(QtGui.QKeySequence('O'), self)
@@ -1515,14 +1550,7 @@ class SessionDisplay(QWidget, Ui_session_display):
 
 
 
-        # Horizontal flip
-        self.hflip_key = QShortcut(QtGui.QKeySequence('H'), self)
-        self.hflip_key.activated.connect(self.flip_horizontal)
 
-
-        # Vertical flip
-        self.vflip_key = QShortcut(QtGui.QKeySequence('V'), self)
-        self.vflip_key.activated.connect(self.flip_vertical)
 
 
         # Mute

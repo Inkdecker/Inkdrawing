@@ -1,1 +1,1 @@
-{"selected_image_row": 3, "selected_session_row": 0, "randomize_settings": false, "auto_start_settings": true, "theme_settings": "dark_theme.txt"}
+{"selected_image_row": 1, "selected_session_row": 0, "randomize_settings": false, "auto_start_settings": true, "theme_settings": "light_theme.txt"}
