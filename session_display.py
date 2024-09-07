@@ -14,13 +14,13 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_session_display(object):
     def setupUi(self, session_display):
         session_display.setObjectName("session_display")
-        session_display.resize(625, 725)
+        session_display.resize(754, 725)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Ignored, QtWidgets.QSizePolicy.Ignored)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(session_display.sizePolicy().hasHeightForWidth())
         session_display.setSizePolicy(sizePolicy)
-        session_display.setMinimumSize(QtCore.QSize(625, 1))
+        session_display.setMinimumSize(QtCore.QSize(650, 1))
         session_display.setMaximumSize(QtCore.QSize(16777215, 16777215))
         font = QtGui.QFont()
         font.setPointSize(15)
@@ -358,7 +358,7 @@ class Ui_session_display(object):
         _translate = QtCore.QCoreApplication.translate
         self.session_info.setText(_translate("session_display", "{info}"))
         self.grid_button.setToolTip(_translate("session_display", "[G] Toggle grid, [CTRL + G] Grid settings"))
-        self.grayscale_button.setToolTip(_translate("session_display", "[F] Toggle grayscale"))
+        self.grayscale_button.setToolTip(_translate("session_display", "[T] Toggle grayscale"))
         self.lock_scale_button.setToolTip(_translate("session_display", "[R] Prevent rescaling of the window\""))
         self.flip_horizontal_button.setToolTip(_translate("session_display", "[H] Horizontal Flip"))
         self.flip_vertical_button.setToolTip(_translate("session_display", "[V] Vertical Flip"))

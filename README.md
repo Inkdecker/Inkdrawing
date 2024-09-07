@@ -19,6 +19,7 @@ This is a free tool to users can use to practice drawing using references from t
 	- Images cache and large image downscaling
 	- Dark / Light themes + Custom themes compatibility
  	- File deletion (Deleted files are send to Recycle Bin)
+ 	- Image rotation 
 
 ##### Supported files :  .jpg, .jpeg, .png, .webp, .tiff, .jfif, .bmp
 
@@ -44,9 +45,11 @@ Button | Hotkey
 ------------ | -------------
 Zoom + | Q, Numpad +, Mousewheel
 Zoom - | D, Numpad -, Mousewheel
+Rotate Right | S, Ctrl + Mousewheel
+Rotate Left | F, Ctrl + Mousewheel
 Toggle grid | G
 Toggle grid settings | Ctrl + G
-Grayscale | F
+Grayscale | T
 Flip Horizontal | H
 Flip Vertical | V
 Toggle Window Resizing (dynamic/static) | R

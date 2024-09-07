@@ -353,8 +353,6 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
 
 
                     elif session and element_name == "session_display_labels":
-                        # Apply styles to session display labels
-                        print(f"Applying session display labels styles...")
                         session_display_label_styles = styles_dict["session_display_labels"]
                         for label_name in ["session_info", "timer_display"]:
                             if hasattr(session, label_name):
@@ -526,7 +524,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
             preset_filename = os.path.join(self.images_presets_dir, f'{preset_name}.txt')
 
             # Write valid image file paths to the preset file with backslash formatting
-            with open(preset_filename, 'w') as f:
+            with open(preset_filename, 'w', encoding='utf-8') as f:
                 for file_path in sorted(checked_files['valid_files']):
                     formatted_path = os.path.normpath(file_path)  # Convert to backslashes
                     f.write(f'{formatted_path}\n')
@@ -1255,6 +1253,10 @@ class SessionDisplay(QWidget, Ui_session_display):
         self.vertical_lines_grid = 4
         self.horizontal_lines_grid = 4
 
+        self.rotation_index = 0  # Starting rotation at 0 degrees
+        self.rotation_factor = 5  # Rotation increment in degrees
+
+
         self.setWindowFlags(QtCore.Qt.FramelessWindowHint)
 
         # Create the border overlay QLabel
@@ -1283,6 +1285,8 @@ class SessionDisplay(QWidget, Ui_session_display):
         self.init_buttons()
         self.init_shortcuts()
         self.skip_count = 1
+
+
 
         # Connect the resize event to update the border overlay
         self.resizeEvent = self.update_border_overlay_geometry
@@ -1401,17 +1405,99 @@ class SessionDisplay(QWidget, Ui_session_display):
             self.end_of_entry = False
         else:
             self.end_of_entry = True
-        print(f'self.endofentry: {self.end_of_entry}')
         
     def init_image_mods(self):
         self.image_mods = {
             'hflip': False,
             'vflip': False,
             'grayscale': False,
-            'scale_factors': [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8],
+            'scale_factors': [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5,
+             1.6, 1.7, 1.8, 1.9, 2, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 3],
             'default_scale_index':7,
             'default_width': 500,
             'scale_index' : 7}
+
+
+    def pixmap_to_numpy(self, pixmap):
+        size = pixmap.size()
+        h = size.height()
+        w = size.width()
+
+        # Get QImage from QPixmap
+        qimage = pixmap.toImage()
+        qimage = qimage.convertToFormat(QtGui.QImage.Format_RGB888)
+
+        # Get pointer to image data
+        ptr = qimage.bits()
+        ptr.setsize(h * w * 3)  # 3 channels (RGB)
+
+        # Create numpy array
+        arr = np.array(ptr).reshape(h, w, 3)
+        return arr
+
+
+    def rotate_image(self, image, angle):
+        """
+        Rotate the given image by the specified angle.
+
+        Parameters:
+            image (numpy.ndarray): The image to rotate.
+            angle (float): The angle by which to rotate the image.
+
+        Returns:
+            numpy.ndarray: The rotated image.
+        """
+        if image is None:
+            print("No image provided for rotation.")
+            return None
+
+        # Check if the image has an alpha channel
+        has_alpha = image.shape[2] == 4 if len(image.shape) == 3 else False
+
+        # Get image dimensions
+        (h, w) = image.shape[:2]
+        image_center = (w / 2, h / 2)
+
+        # Create rotation matrix for the given angle
+        matrix = cv2.getRotationMatrix2D(image_center, angle, 1.0)
+
+        # Perform the rotation
+        if has_alpha:
+            # Split channels (BGR + Alpha)
+            bgr = image[..., :3]  # BGR channels
+            alpha = image[..., 3]
+
+            # Rotate the BGR and Alpha channels separately
+            rotated_bgr = cv2.warpAffine(bgr, matrix, (w, h), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=(0, 0, 0))
+            rotated_alpha = cv2.warpAffine(alpha, matrix, (w, h), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=(0,))
+
+            # Recombine the rotated BGR and Alpha
+            rotated_image = np.dstack([rotated_bgr, rotated_alpha])
+        else:
+            # Rotate image without alpha channel
+            rotated_image = cv2.warpAffine(image, matrix, (w, h), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=(0, 0, 0))
+
+        # Ensure the rotated image is in RGB format for Qt
+        if rotated_image.shape[2] == 3:
+            rotated_image = cv2.cvtColor(rotated_image, cv2.COLOR_BGR2RGB)
+        elif rotated_image.shape[2] == 4:
+            rotated_image = cv2.cvtColor(rotated_image, cv2.COLOR_BGRA2RGBA)
+
+        return rotated_image
+
+
+    def rotate_image_right(self):
+            self.rotation_index -= self.rotation_factor  # Clockwise
+            self.display_image(play_sound=False, update_status = False)
+
+    def rotate_image_left(self):
+            self.rotation_index += self.rotation_factor  # Clockwise
+            self.display_image(play_sound=False, update_status = False)
+
+
+
+
+
 
     def init_sounds(self):
         """
@@ -1453,6 +1539,8 @@ class SessionDisplay(QWidget, Ui_session_display):
         self.previous_image.clicked.connect(self.load_prev_image)
         self.next_image.clicked.connect(self.load_next_image)
         self.stop_session.clicked.connect(self.close)
+
+
         self.flip_horizontal_button.clicked.connect(self.flip_horizontal)
         self.flip_vertical_button.clicked.connect(self.flip_vertical)
 
@@ -1467,7 +1555,7 @@ class SessionDisplay(QWidget, Ui_session_display):
         self.pause_timer.clicked.connect(self.pause)
 
         self.show_main_window_button.clicked.connect(self.show_main_window)
-        # Connect buttons to methods
+
 
         self.copy_image_path_button.clicked.connect(self.copy_image_path)
         self.open_folder_button.clicked.connect(self.open_image_folder)
@@ -1479,6 +1567,12 @@ class SessionDisplay(QWidget, Ui_session_display):
         # Resize
         self.toggle_resize_key = QShortcut(QtGui.QKeySequence('R'), self)
         self.toggle_resize_key.activated.connect(self.toggle_resize)
+
+        # Rotations 
+        self.right_rotation_key = QShortcut(QtGui.QKeySequence('S'), self)
+        self.right_rotation_key.activated.connect(self.rotate_image_right)
+        self.left_rotation_key = QShortcut(QtGui.QKeySequence('F'), self)
+        self.left_rotation_key.activated.connect(self.rotate_image_left)
 
         # Always on top
         self.always_on_top_key = QShortcut(QtGui.QKeySequence('A'), self)
@@ -1508,7 +1602,7 @@ class SessionDisplay(QWidget, Ui_session_display):
 
 
         # Grayscale
-        self.quit_key = QShortcut(QtGui.QKeySequence('F'), self)
+        self.quit_key = QShortcut(QtGui.QKeySequence('T'), self)
         self.quit_key.activated.connect(self.grayscale)
 
 
@@ -1536,9 +1630,7 @@ class SessionDisplay(QWidget, Ui_session_display):
         self.zoom_out_numpad_key = QtWidgets.QShortcut(QtGui.QKeySequence(QtCore.Qt.Key_Minus), self)
         self.zoom_out_numpad_key.activated.connect(self.zoom_minus)
 
-        # Close window
-        self.quit_key = QShortcut(QtGui.QKeySequence('S'), self)
-        self.quit_key.activated.connect(self.close)
+
 
         # Main window shortcut
         self.show_main_window_shortcut = QtWidgets.QShortcut(QtGui.QKeySequence("Tab"), self)
@@ -1592,13 +1684,22 @@ class SessionDisplay(QWidget, Ui_session_display):
         self.deleteLater()
 
 
-
     def wheelEvent(self, event):
-        if not self.toggle_resize_status:
+        # Check if Ctrl key is pressed
+        ctrl_pressed = event.modifiers() & QtCore.Qt.ControlModifier
+
+        if ctrl_pressed:
+            # Rotate image based on wheel movement
             if event.angleDelta().y() > 0:
-                self.zoom_minus()
+                self.rotate_image_right()
             else:
+                self.rotate_image_left()
+        else:
+            # Zoom in or out based on wheel movement
+            if event.angleDelta().y() > 0:
                 self.zoom_plus()
+            else:
+                self.zoom_minus()
 
 
     def mousePressEvent(self, event):
@@ -1721,7 +1822,7 @@ class SessionDisplay(QWidget, Ui_session_display):
         file_path = Path(self.playlist[self.playlist_position])
 
         # Supported image formats
-        valid_extensions = {'.jpg', '.jpeg', '.png', '.webp', '.tiff','.jfif','.bmp'}
+        valid_extensions = {'.jpg', '.jpeg', '.png', '.webp', '.tiff', '.jfif', '.bmp'}
         
         # Extract file extension and check if it's valid
         file_extension = file_path.suffix.lower()
@@ -1731,11 +1832,11 @@ class SessionDisplay(QWidget, Ui_session_display):
                 try:
                     # Convert image to CV format
                     cvimage = self.convert_to_cvimage() if file_extension == '.jpg' else cv2.imread(str(file_path))
-                    
+
                     # Check if the image was loaded correctly
                     if cvimage is None:
                         raise FileNotFoundError(f"Failed to load image: {file_path}")
-                    
+
                     # Get image dimensions and prepare for QImage
                     height, width = cvimage.shape[:2]
                     bytes_per_line = cvimage.strides[0]
@@ -1748,7 +1849,6 @@ class SessionDisplay(QWidget, Ui_session_display):
                 # Downscale the image to default_width if necessary
                 default_width = self.image_mods['default_width']
                 if width > default_width:
-
                     scaling_factor = default_width / width
                     new_width = default_width
                     new_height = int(height * scaling_factor)
@@ -1767,29 +1867,30 @@ class SessionDisplay(QWidget, Ui_session_display):
                 print(f"Image not found in cache: {file_path}")
                 return
 
+        # Apply grayscale modification if needed
+        if self.image_mods['grayscale']:
+            cvimage = cv2.cvtColor(cvimage, cv2.COLOR_BGR2GRAY)
+            # Convert grayscale image to 3-channel format
+            cvimage = cv2.cvtColor(cvimage, cv2.COLOR_GRAY2RGB)
+
+        # Apply horizontal and vertical flips
+        if self.image_mods['hflip']:
+            cvimage = np.fliplr(cvimage)
+        if self.image_mods['vflip']:
+            cvimage = np.flipud(cvimage)
+
+        cvimage = self.rotate_image(cvimage, self.rotation_index)
+
         # Convert CV image to QImage
-
-
         height, width, channels = cvimage.shape
         bytes_per_line = channels * width
+        qt_image_format = QtGui.QImage.Format_RGBA8888 if channels == 4 else QtGui.QImage.Format_RGB888
 
-        # Grayscale
-        if self.image_mods['grayscale'] :
-            cvimage = cv2.cvtColor(cvimage, cv2.COLOR_BGR2GRAY)
-            self.image = QtGui.QImage(cvimage.data, width, height, width, QtGui.QImage.Format_Grayscale8)
-        else:
-            self.image = QtGui.QImage(
-                cvimage.data, width, height, bytes_per_line, QtGui.QImage.Format_RGB888).rgbSwapped()
-
-
-
-
-
-        # Apply flips
-        self.image = self.image.mirrored(horizontal=self.image_mods['hflip'], vertical=self.image_mods['vflip'])
+        # Convert to QImage
+        qt_image = QtGui.QImage(cvimage.data, width, height, bytes_per_line, qt_image_format)
 
         # Convert to QPixmap
-        self.image = QtGui.QPixmap.fromImage(self.image)
+        self.image = QtGui.QPixmap.fromImage(qt_image)
 
         # Scaling and display logic
         scale_index = self.image_mods['scale_index']
@@ -1799,7 +1900,6 @@ class SessionDisplay(QWidget, Ui_session_display):
         new_width = int(self.image.width() * scale_value)
         new_height = int(self.image.height() * scale_value)
 
-
         zoom_size = QtCore.QSize(new_width, new_height)
 
         # Rescale the pixmap according to the zoom level
@@ -1807,18 +1907,11 @@ class SessionDisplay(QWidget, Ui_session_display):
             zoom_size,
             aspectRatioMode=QtCore.Qt.KeepAspectRatio,
             transformMode=QtCore.Qt.SmoothTransformation
-
-
         )
-
-
-
-
 
         zoom_size = QtCore.QSize(new_width, new_height)
         # Display image
         if self.toggle_resize_status:
-
             self.image_display.setPixmap(
                 scaled_pixmap.scaled(
                     self.size(),
@@ -1826,29 +1919,26 @@ class SessionDisplay(QWidget, Ui_session_display):
                     transformMode=QtCore.Qt.SmoothTransformation
                 )
             )
-
-
         else:
-
-            if (self.image_size_cache == [new_width, new_height]):
+            if self.image_size_cache == [new_width, new_height]:
                 self.image_display.setPixmap(
                     self.image.scaled(
                         self.image_display.size(),
                         aspectRatioMode=QtCore.Qt.KeepAspectRatio,
-                        transformMode=QtCore.Qt.SmoothTransformation))
-
-
+                        transformMode=QtCore.Qt.SmoothTransformation
+                    )
+                )
             else:
                 self.image_display.resize(scaled_pixmap.size())
                 self.image_display.setPixmap(scaled_pixmap)
                 self.resize(
                     scaled_pixmap.size().width(),
-                    scaled_pixmap.size().height() )
-     
+                    scaled_pixmap.size().height()
+                )
 
         self.image_size_cache = [new_width, new_height]
         pixmap_size = self.image_display.pixmap().size()
-        self.pixmap_size_cache = [pixmap_size.width() , pixmap_size.height()]        
+        self.pixmap_size_cache = [pixmap_size.width(), pixmap_size.height()]
 
         if self.grid_displayed:
             self.apply_grid()
@@ -2220,6 +2310,7 @@ class SessionDisplay(QWidget, Ui_session_display):
         # Check if we are at the last image
         if self.playlist_position < len(self.playlist) - 1:
             self.playlist_position += 1
+            self.rotation_index = 0
             self.new_entry = False
             self.reset_timer()  # Reset the timer for a new image
             self.display_image()
@@ -2241,6 +2332,7 @@ class SessionDisplay(QWidget, Ui_session_display):
         # Check if we are at the first image
         if self.playlist_position > 0:
             self.playlist_position -= 1
+            self.rotation_index = 0
             self.new_entry = False
             self.display_image()  # Display the previous image
             

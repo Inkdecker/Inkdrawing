@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>625</width>
+    <width>754</width>
     <height>725</height>
    </rect>
   </property>
@@ -18,7 +18,7 @@
   </property>
   <property name="minimumSize">
    <size>
-    <width>625</width>
+    <width>650</width>
     <height>1</height>
    </size>
   </property>
@@ -245,7 +245,7 @@
           <enum>Qt::NoFocus</enum>
          </property>
          <property name="toolTip">
-          <string>[F] Toggle grayscale</string>
+          <string>[T] Toggle grayscale</string>
          </property>
          <property name="styleSheet">
           <string notr="true">background: rgb(130, 130, 130);</string>
