@@ -3,6 +3,8 @@ build/
 dist/
 presets/images_presets/
 presets/session_presets/
+Test folder/
+
 
 1_spec_file.bat
 2_exe_packing.bat

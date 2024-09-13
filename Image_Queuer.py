@@ -1879,7 +1879,11 @@ class SessionDisplay(QWidget, Ui_session_display):
         if self.image_mods['vflip']:
             cvimage = np.flipud(cvimage)
 
-        cvimage = self.rotate_image(cvimage, self.rotation_index)
+        if self.image_mods['hflip']:
+            cvimage = self.rotate_image(cvimage, -self.rotation_index)
+        else:
+            cvimage = self.rotate_image(cvimage, self.rotation_index)
+
 
         # Convert CV image to QImage
         height, width, channels = cvimage.shape

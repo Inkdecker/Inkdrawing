@@ -15,7 +15,7 @@ This is a free tool to users can use to practice drawing using references from t
 	- Zoom functions
 	- Grid toggle + Grid settings
 	- Copy current image path to clipboard
-	- Open image folder
+	- Open current image folder
 	- Images cache and large image downscaling
 	- Dark / Light themes + Custom themes compatibility
  	- File deletion (Deleted files are send to Recycle Bin)
