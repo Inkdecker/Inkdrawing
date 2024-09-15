@@ -20,7 +20,7 @@ This is a free tool to users can use to practice drawing using references from t
 	- Dark / Light themes + Custom themes compatibility
  	- File deletion (Deleted files are send to Recycle Bin)
  	- Image rotation 
-  	- Custom shortcuts (Edit the session_settings file, duplicate shortcuts don't work.)
+  	- Custom shortcuts (Edit the session_settings file, duplicate shortcuts not working)
 
 ##### Supported files :  .jpg, .jpeg, .png, .webp, .tiff, .jfif, .bmp
 
