@@ -20,6 +20,7 @@ This is a free tool to users can use to practice drawing using references from t
 	- Dark / Light themes + Custom themes compatibility
  	- File deletion (Deleted files are send to Recycle Bin)
  	- Image rotation 
+  	- Custom shortcuts (Edit the session_settings file, duplicate shortcuts don't work.)
 
 ##### Supported files :  .jpg, .jpeg, .png, .webp, .tiff, .jfif, .bmp
 
@@ -30,7 +31,8 @@ This is a free tool to users can use to practice drawing using references from t
 
 
 ## Troubleshouting
-- Delete the preset folder and restart the executable to reset to default settings.
+- Delete the session_settings.txt to reset settings and shortcuts.
+- Delete the preset folder and restart the executable to reset everything back to default.
 
 
 ## Hotkeys
