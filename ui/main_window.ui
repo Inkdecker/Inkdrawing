@@ -702,9 +702,6 @@
               <height>24</height>
              </size>
             </property>
-            <property name="shortcut">
-             <string>Ctrl+Shift+C</string>
-            </property>
            </widget>
           </item>
           <item>
@@ -931,9 +928,6 @@
               <width>24</width>
               <height>24</height>
              </size>
-            </property>
-            <property name="shortcut">
-             <string>F</string>
             </property>
             <property name="autoDefault">
              <bool>false</bool>
@@ -1209,9 +1203,6 @@
         <property name="text">
          <string>Delete Preset</string>
         </property>
-        <property name="shortcut">
-         <string>Ctrl+Shift+D</string>
-        </property>
        </widget>
       </item>
      </layout>
@@ -1308,7 +1299,7 @@
           <item>
            <widget class="QPushButton" name="close_window_button">
             <property name="toolTip">
-             <string>[Esc] Close the setting window.</string>
+             <string/>
             </property>
             <property name="styleSheet">
              <string notr="true">background: rgb(220,220,220); color: 'black';</string>
@@ -1348,7 +1339,7 @@
         <item row="0" column="2">
          <widget class="QPushButton" name="start_session_button">
           <property name="toolTip">
-           <string>[S] Start the session.</string>
+           <string/>
           </property>
           <property name="autoFillBackground">
            <bool>false</bool>

@@ -195,7 +195,7 @@
           </size>
          </property>
          <property name="toolTip">
-          <string>[G] Toggle grid, [CTRL + G] Grid settings</string>
+          <string/>
          </property>
          <property name="styleSheet">
           <string notr="true">background: rgb(130, 130, 130);</string>
@@ -245,7 +245,7 @@
           <enum>Qt::NoFocus</enum>
          </property>
          <property name="toolTip">
-          <string>[T] Toggle grayscale</string>
+          <string/>
          </property>
          <property name="styleSheet">
           <string notr="true">background: rgb(130, 130, 130);</string>
@@ -289,7 +289,7 @@
           </size>
          </property>
          <property name="toolTip">
-          <string>[R] Prevent rescaling of the window&quot;</string>
+          <string/>
          </property>
          <property name="styleSheet">
           <string notr="true">background: rgb(130, 130, 130);</string>
@@ -339,7 +339,7 @@
           <enum>Qt::NoFocus</enum>
          </property>
          <property name="toolTip">
-          <string>[H] Horizontal Flip</string>
+          <string/>
          </property>
          <property name="styleSheet">
           <string notr="true">background: rgb(130, 130, 130);</string>
@@ -389,7 +389,7 @@
           <enum>Qt::NoFocus</enum>
          </property>
          <property name="toolTip">
-          <string>[V] Vertical Flip</string>
+          <string/>
          </property>
          <property name="styleSheet">
           <string notr="true">background: rgb(130, 130, 130);</string>
@@ -439,7 +439,7 @@
           <enum>Qt::NoFocus</enum>
          </property>
          <property name="toolTip">
-          <string>[Left] Previous image</string>
+          <string/>
          </property>
          <property name="styleSheet">
           <string notr="true">background: rgb(130, 130, 130);</string>
@@ -456,9 +456,6 @@
            <width>15</width>
            <height>15</height>
           </size>
-         </property>
-         <property name="shortcut">
-          <string>Left</string>
          </property>
          <property name="checkable">
           <bool>false</bool>
@@ -492,7 +489,7 @@
           <enum>Qt::NoFocus</enum>
          </property>
          <property name="toolTip">
-          <string>[Space] Pause Timer</string>
+          <string/>
          </property>
          <property name="styleSheet">
           <string notr="true">background: rgb(130, 130, 130);</string>
@@ -509,9 +506,6 @@
            <width>15</width>
            <height>15</height>
           </size>
-         </property>
-         <property name="shortcut">
-          <string>Space</string>
          </property>
          <property name="checkable">
           <bool>true</bool>
@@ -545,7 +539,7 @@
           <enum>Qt::NoFocus</enum>
          </property>
          <property name="toolTip">
-          <string>[Esc] Stop Session and closes window</string>
+          <string/>
          </property>
          <property name="styleSheet">
           <string notr="true">background: rgb(130, 130, 130);</string>
@@ -562,9 +556,6 @@
            <width>15</width>
            <height>15</height>
           </size>
-         </property>
-         <property name="shortcut">
-          <string>Esc</string>
          </property>
          <property name="checkable">
           <bool>false</bool>
@@ -598,7 +589,7 @@
           <enum>Qt::NoFocus</enum>
          </property>
          <property name="toolTip">
-          <string>[Right] Next Image</string>
+          <string/>
          </property>
          <property name="styleSheet">
           <string notr="true">background: rgb(130, 130, 130);</string>
@@ -615,9 +606,6 @@
            <width>15</width>
            <height>15</height>
           </size>
-         </property>
-         <property name="shortcut">
-          <string>Right</string>
          </property>
          <property name="checkable">
           <bool>false</bool>
@@ -645,7 +633,7 @@
           </size>
          </property>
          <property name="toolTip">
-          <string>[C] Copy image path to clipboard</string>
+          <string/>
          </property>
          <property name="styleSheet">
           <string notr="true">background: rgb(130, 130, 130);</string>
@@ -689,7 +677,7 @@
           </size>
          </property>
          <property name="toolTip">
-          <string>[O] Open image folder</string>
+          <string/>
          </property>
          <property name="styleSheet">
           <string notr="true">background: rgb(130, 130, 130);</string>
@@ -733,7 +721,7 @@
           </size>
          </property>
          <property name="toolTip">
-          <string>[Ctrl + D] Delete image</string>
+          <string/>
          </property>
          <property name="styleSheet">
           <string notr="true">background: rgb(130, 130, 130);</string>
@@ -777,7 +765,7 @@
           </size>
          </property>
          <property name="toolTip">
-          <string>[Tab] Open settings window</string>
+          <string/>
          </property>
          <property name="styleSheet">
           <string notr="true">background: rgb(130, 130, 130);</string>

@@ -43,6 +43,45 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
 
         self.valid_extensions = {'.jpg', '.jpeg', '.png', '.webp', '.tiff','.jfif', '.bmp'}
 
+
+        # Define default shortcuts
+        self.default_shortcuts = {
+            "main_window": {
+                "start": "S", 
+                "close": "Escape"
+            },
+            "session_window": {
+                "toggle_resize": "R",
+                "rotate_right": "S",
+                "rotate_left": "F",
+                "always_on_top": "A",
+                "flip_horizontal": "H",
+                "flip_vertical": "V",
+                "prev_image": "Left",
+                "pause_timer": "Space",
+                "close": "Escape",
+                "next_image": "Right",
+                "open_folder": "O",
+                "copy_path": "C",
+                "delete_image": "Ctrl+D",
+                "grayscale": "T",
+                "grid_settings": "Ctrl+G",
+                "toggle_grid": "G",
+                "zoom_in": "Q",
+                "zoom_out": "D",
+                "zoom_in_numpad": "+",
+                "zoom_out_numpad": "-",
+                "show_main_window": "Tab",
+                "mute": "M",
+                "add_30_seconds": "Up",
+                "add_60_seconds": "Ctrl+Up",
+                "restart_timer": "Ctrl+Shift+Up"
+            }
+        }
+
+
+
+
         # Use the executable's directory for absolute paths
         if getattr(sys, 'frozen', False):  # Check if the application is frozen (compiled as an EXE)
             base_dir = os.path.dirname(sys.executable)
@@ -99,11 +138,13 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
         self.total_time = 0
         self.total_images = 0
         self.selection = {'folders': [], 'files': []}
-        self.init_buttons()
-        self.init_shortcuts()
+
 
         # Load session settings at startup
         self.load_session_settings()
+        self.init_buttons()
+        self.apply_shortcuts_main_window()
+
 
         # Hide the main window initially
         #self.setWindowFlags(QtCore.Qt.Window | QtCore.Qt.FramelessWindowHint)
@@ -247,35 +288,32 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
         # Buttons for selection
         self.add_folders_button.clicked.connect(self.open_folder)
         self.delete_images_preset.clicked.connect(self.delete_images_files)
+        
         # Buttons for preset
-
         self.save_session_presets_button.clicked.connect(self.save_session_presets) 
         self.delete_session_preset.clicked.connect(self.delete_presets_files)
 
+        # Start session button with tooltip
         self.start_session_button.clicked.connect(self.start_session_from_files)
+        self.start_session_button.setToolTip(f"[{self.shortcut_settings['main_window']['start']}] Start the session.")
+
+        # Close window button with tooltip
         self.close_window_button.clicked.connect(self.save_session_settings)
-
         self.close_window_button.clicked.connect(self.close)
+        self.close_window_button.setToolTip(f"[{self.shortcut_settings['main_window']['close']}] Close the setting window.")
 
-
+        # Toggles
         self.randomize_toggle.stateChanged.connect(self.update_randomize_settings)
         self.auto_start_toggle.stateChanged.connect(self.update_auto_start_settings)
 
+        # Table selection handlers
         self.table_images_selection.itemChanged.connect(self.rename_presets)
         self.table_session_selection.itemChanged.connect(self.rename_presets)
 
+        # Theme selector button
         self.theme_options_button.clicked.connect(self.open_theme_selector)
 
 
-    def init_shortcuts(self):
-        # Ctrl+Enter to start session
-
-        self.enter_shortcut = QShortcut(QtGui.QKeySequence('S'), self)
-        self.enter_shortcut.activated.connect(self.start_session_from_files)
-
-        # Escape to close window
-        self.escape_shortcut = QShortcut(QtGui.QKeySequence('Escape'), self)
-        self.escape_shortcut.activated.connect(self.close)
 
 
 
@@ -815,6 +853,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
 
         self.select_rows_from_cache(use_cache)    
 
+
         
 
 
@@ -1063,6 +1102,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
         )
         self.init_styles(session=self.display)
         self.display.show()
+        self.save_session_settings()
 
 
     def remove_missing_files(self, image_file_path):
@@ -1102,90 +1142,137 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
 
 
 
-    def save_session_settings(self):
-        """
-        Saves the current selection of image and session rows and the randomize setting to session_settings.txt.
-        """
-        session_settings_path = os.path.join(self.presets_dir, 'session_settings.txt')
 
-        # Get currently selected rows
-        selected_image_row = self.table_images_selection.currentRow()
-        selected_session_row = self.table_session_selection.currentRow()
-
-        # Prepare data to save
-        data = {
-            'selected_image_row': selected_image_row,
-            'selected_session_row': selected_session_row,
-            'randomize_settings': self.randomize_settings,
-            'auto_start_settings': self.auto_start_settings,
-            'theme_settings': self.current_theme  # Save current theme setting
-        }
-
-        # Write to the session settings file
-        try:
-            with open(session_settings_path, 'w') as f:
-                json.dump(data, f)
-                print(f"Saved session settings: image_row={selected_image_row}, session_row={selected_session_row}, randomize_settings={self.randomize_settings}, auto_start_session={self.auto_start_settings}, theme_settings={self.current_theme}")
-        except Exception as e:
-            print(f"Failed to save session settings. Error: {e}")
 
 
 
     def load_session_settings(self):
-        """
-        Loads session settings from session_settings.txt to restore the last selected rows
-        and the randomize setting. Creates the file with default settings if it doesn't exist.
-        """
         session_settings_path = os.path.join(self.presets_dir, 'session_settings.txt')
 
-        # Default settings to be written to a new file
+        # Default settings to be used if there's a problem with the file
         default_settings = {
             "selected_image_row": -1,
             "selected_session_row": -1,
             "randomize_settings": False,
             "auto_start_settings": False,
-            "theme_settings": 'dark_theme.txt'
-               }
+            "theme_settings": 'dark_theme.txt',
+            "shortcuts": self.default_shortcuts
+        }
 
-
-        # Check if the session settings file exists
+        # Load current settings if the file exists
         if os.path.exists(session_settings_path):
             try:
                 with open(session_settings_path, 'r') as f:
-                    data = json.load(f)
-                    image_row = data.get('selected_image_row', -1)
-                    session_row = data.get('selected_session_row', -1)
-                    self.randomize_settings = data.get('randomize_settings', False)
-                    self.auto_start_settings = data.get('auto_start_settings', False)
-                    self.current_theme = data.get('theme_settings', 'dark_theme.txt')  # Load theme settings
-
-                    # Restore selection if valid
-                    if image_row >= 0 and image_row < self.table_images_selection.rowCount():
-                        self.table_images_selection.selectRow(image_row)
-                        self.image_selection_cache = image_row
-                    if session_row >= 0 and session_row < self.table_session_selection.rowCount():
-                        self.table_session_selection.selectRow(session_row)
-                        self.session_selection_cache = session_row
-                    
-                    # Set the checkbox state based on the loaded randomize_settings
-                    self.randomize_toggle.setChecked(self.randomize_settings)
-                    self.auto_start_toggle.setChecked(self.auto_start_settings)
-                    self.save_session_settings()
-                    
-                    print(f"Loaded session settings: image_row={image_row}, session_row={session_row}, randomize_settings={self.randomize_settings}, theme_settings={self.current_theme}")
-
+                    current_settings = json.load(f)
             except (FileNotFoundError, json.JSONDecodeError):
-                print("Failed to load session settings. Creating a new file with default settings.")
-                # Write default settings to the file
-                with open(session_settings_path, 'w') as f:
-                    json.dump(default_settings, f, indent=4)
-
-
-
+                current_settings = default_settings.copy()  # Fallback to default if there is an error
+                print("Error loading session settings. Using default settings.")
         else:
-            print("Session settings file not found. Creating a new one with default settings.")
-            with open(session_settings_path, 'w') as f:
-                json.dump(default_settings, f, indent=4)
+            current_settings = default_settings.copy()  # Use default settings if the file doesn't exist
+            print("Session settings file not found. Using default settings.")
+
+        # Validate the shortcuts
+        if not self.validate_shortcuts(current_settings.get('shortcuts', {})):
+            print("Invalid shortcuts detected. Resetting to default shortcuts.")
+            self.reset_shortcuts()  # Reset only the shortcuts to the default
+            current_settings['shortcuts'] = self.default_shortcuts  # Ensure in-memory settings reflect the reset
+
+        # Apply the valid or reset settings
+        self.shortcut_settings = current_settings.get('shortcuts', self.default_shortcuts)
+        self.randomize_settings = current_settings.get('randomize_settings', False)
+        self.auto_start_settings = current_settings.get('auto_start_settings', False)
+        self.current_theme = current_settings.get('theme_settings', 'dark_theme.txt')
+
+        # --- Row selection logic ---
+        selected_image_row = current_settings.get('selected_image_row', -1)
+        selected_session_row = current_settings.get('selected_session_row', -1)
+
+        # Ensure selected rows are within the table's bounds
+        if 0 <= selected_image_row < self.table_images_selection.rowCount():
+            self.table_images_selection.selectRow(selected_image_row)
+        else:
+            print("Invalid or out-of-bounds selected_image_row, no selection applied.")
+
+        if 0 <= selected_session_row < self.table_session_selection.rowCount():
+            self.table_session_selection.selectRow(selected_session_row)
+        else:
+            print("Invalid or out-of-bounds selected_session_row, no selection applied.")
+
+        # Save the session settings after loading them (in case anything needs updating)
+        self.save_session_settings()
+
+    def save_session_settings(self):
+        """Save the current session settings to the session_settings.txt file."""
+        session_settings_path = os.path.join(self.presets_dir, 'session_settings.txt')
+
+        # Collect the current settings
+        current_settings = {
+            "selected_image_row": self.table_images_selection.currentRow(),
+            "selected_session_row": self.table_session_selection.currentRow(),
+            "randomize_settings": self.randomize_settings,
+            "auto_start_settings": self.auto_start_settings,
+            "theme_settings": self.current_theme,
+            "shortcuts": self.shortcut_settings
+        }
+
+        # Save the settings to the file
+        with open(session_settings_path, 'w') as f:
+            json.dump(current_settings, f, indent=4)
+        print("Session settings saved.")
+
+
+    def validate_shortcuts(self, shortcuts):
+        valid = True
+
+        for window, actions in shortcuts.items():
+            for action, shortcut in actions.items():
+                try:
+                    # Validate shortcut format
+                    if len(shortcut) == 1 and shortcut.isalpha():
+                        continue  # Single-letter shortcuts are allowed, skip validation
+
+                    # Attempt to create a QKeySequence to validate the shortcut
+                    sequence = QtGui.QKeySequence(shortcut)
+                    if sequence.isEmpty():
+                        raise ValueError("Invalid QKeySequence")
+                    
+                except Exception as e:
+                    print(f"Invalid shortcut: {shortcut} for {window} - {str(e)}")
+                    valid = False
+
+        return valid
+
+    def apply_shortcuts_main_window(self):
+        """Apply the shortcuts for the main window."""
+
+        self.main_window_start_shortcut = QtWidgets.QShortcut(QtGui.QKeySequence(self.shortcut_settings["main_window"]["start"]), self)
+        self.main_window_start_shortcut.activated.connect(self.start_session_from_files)
+
+        self.main_window_close_shortcut = QtWidgets.QShortcut(QtGui.QKeySequence(self.shortcut_settings["main_window"]["close"]), self)
+        self.main_window_close_shortcut.activated.connect(self.close)
+
+    def reset_shortcuts(self):
+        # Path to session settings file
+        session_settings_path = os.path.join(self.presets_dir, 'session_settings.txt')
+        
+        # Load current settings
+        if os.path.exists(session_settings_path):
+            try:
+                with open(session_settings_path, 'r') as f:
+                    current_settings = json.load(f)
+            except (FileNotFoundError, json.JSONDecodeError):
+                current_settings = {}
+        else:
+            current_settings = {}
+
+        # Reset only the shortcuts
+        current_settings['shortcuts'] = self.default_shortcuts
+
+        # Write updated settings back to file
+        with open(session_settings_path, 'w') as f:
+            json.dump(current_settings, f, indent=4)
+        
+        print("Shortcuts reset to defaults.")
 
 
     
@@ -1282,8 +1369,8 @@ class SessionDisplay(QWidget, Ui_session_display):
         self.init_sounds()
         self.init_mixer()
         self.load_entry()
-        self.init_buttons()
-        self.init_shortcuts()
+        self.init_session_buttons()
+        self.apply_shortcuts_session_window()
         self.skip_count = 1
 
 
@@ -1291,6 +1378,7 @@ class SessionDisplay(QWidget, Ui_session_display):
         # Connect the resize event to update the border overlay
         self.resizeEvent = self.update_border_overlay_geometry
         self.setMinimumSize(QtCore.QSize(640, 1))
+
 
 
 
@@ -1535,125 +1623,134 @@ class SessionDisplay(QWidget, Ui_session_display):
 
 
 
-    def init_buttons(self):
-        self.previous_image.clicked.connect(self.load_prev_image)
-        self.next_image.clicked.connect(self.load_next_image)
-        self.stop_session.clicked.connect(self.close)
 
-
-        self.flip_horizontal_button.clicked.connect(self.flip_horizontal)
-        self.flip_vertical_button.clicked.connect(self.flip_vertical)
-
+    def init_session_buttons(self):
+        # Session tools
         self.grid_button.clicked.connect(self.toggle_grid)
-
-
+        self.grid_button.setToolTip(f"[{view.shortcut_settings['session_window']['toggle_grid']}] Toggle grid, [{view.shortcut_settings['session_window']['grid_settings']}] Grid settings")
+        
         self.grayscale_button.clicked.connect(self.grayscale)
+        self.grayscale_button.setToolTip(f"[{view.shortcut_settings['session_window']['grayscale']}] Toggle grayscale")
 
         self.lock_scale_button.clicked.connect(self.toggle_resize)
+        self.lock_scale_button.setToolTip(f"[{view.shortcut_settings['session_window']['toggle_resize']}] Prevent rescaling of the window")
 
+        # Vertical and Horizontal flips
+        self.flip_horizontal_button.clicked.connect(self.flip_horizontal)
+        self.flip_horizontal_button.setToolTip(f"[{view.shortcut_settings['session_window']['flip_horizontal']}] Horizontal Flip")
+
+        self.flip_vertical_button.clicked.connect(self.flip_vertical)
+        self.flip_vertical_button.setToolTip(f"[{view.shortcut_settings['session_window']['flip_vertical']}] Vertical Flip")
+
+        # Session navigation
+        self.previous_image.clicked.connect(self.load_prev_image)
+        self.previous_image.setToolTip(f"[{view.shortcut_settings['session_window']['prev_image']}] Previous image")
 
         self.pause_timer.clicked.connect(self.pause)
+        self.pause_timer.setToolTip(f"[{view.shortcut_settings['session_window']['pause_timer']}] Pause Timer")
 
-        self.show_main_window_button.clicked.connect(self.show_main_window)
+        self.stop_session.clicked.connect(self.close)
+        self.stop_session.setToolTip(f"[{view.shortcut_settings['session_window']['close']}] Stop Session and closes window")
 
+        self.next_image.clicked.connect(self.load_next_image)
+        self.next_image.setToolTip(f"[{view.shortcut_settings['session_window']['next_image']}] Next Image")
 
+        # Image path and folder
         self.copy_image_path_button.clicked.connect(self.copy_image_path)
+        self.copy_image_path_button.setToolTip(f"[{view.shortcut_settings['session_window']['copy_path']}] Copy image path to clipboard")
+
         self.open_folder_button.clicked.connect(self.open_image_folder)
+        self.open_folder_button.setToolTip(f"[{view.shortcut_settings['session_window']['open_folder']}] Open image folder")
 
         self.delete_image_button.clicked.connect(self.delete_image)
+        self.delete_image_button.setToolTip(f"[{view.shortcut_settings['session_window']['delete_image']}] Delete image")
 
-    def init_shortcuts(self):
+        # Setting window
+        self.show_main_window_button.clicked.connect(self.show_main_window)
+        self.show_main_window_button.setToolTip(f"[{view.shortcut_settings['session_window']['show_main_window']}] Open settings window")
 
-        # Resize
-        self.toggle_resize_key = QShortcut(QtGui.QKeySequence('R'), self)
+        
+        
+
+        
+
+
+    def apply_shortcuts_session_window(self):
+        """Apply the shortcuts for the session window."""
+
+        self.toggle_resize_key = QtWidgets.QShortcut(QtGui.QKeySequence(view.shortcut_settings["session_window"]["toggle_resize"]), self)
         self.toggle_resize_key.activated.connect(self.toggle_resize)
 
-        # Rotations 
-        self.right_rotation_key = QShortcut(QtGui.QKeySequence('S'), self)
+        self.right_rotation_key = QtWidgets.QShortcut(QtGui.QKeySequence(view.shortcut_settings["session_window"]["rotate_right"]), self)
         self.right_rotation_key.activated.connect(self.rotate_image_right)
-        self.left_rotation_key = QShortcut(QtGui.QKeySequence('F'), self)
+
+        self.left_rotation_key = QtWidgets.QShortcut(QtGui.QKeySequence(view.shortcut_settings["session_window"]["rotate_left"]), self)
         self.left_rotation_key.activated.connect(self.rotate_image_left)
 
-        # Always on top
-        self.always_on_top_key = QShortcut(QtGui.QKeySequence('A'), self)
+        self.always_on_top_key = QtWidgets.QShortcut(QtGui.QKeySequence(view.shortcut_settings["session_window"]["always_on_top"]), self)
         self.always_on_top_key.activated.connect(self.toggle_always_on_top)
 
-        # Horizontal flip
-        self.hflip_key = QShortcut(QtGui.QKeySequence('H'), self)
+        self.hflip_key = QtWidgets.QShortcut(QtGui.QKeySequence(view.shortcut_settings["session_window"]["flip_horizontal"]), self)
         self.hflip_key.activated.connect(self.flip_horizontal)
 
-
-        # Vertical flip
-        self.vflip_key = QShortcut(QtGui.QKeySequence('V'), self)
+        self.vflip_key = QtWidgets.QShortcut(QtGui.QKeySequence(view.shortcut_settings["session_window"]["flip_vertical"]), self)
         self.vflip_key.activated.connect(self.flip_vertical)
 
+        self.prev_image_key = QtWidgets.QShortcut(QtGui.QKeySequence(view.shortcut_settings["session_window"]["prev_image"]), self)
+        self.prev_image_key.activated.connect(self.load_prev_image)
 
-        # Open image folder
-        self.open_key = QShortcut(QtGui.QKeySequence('O'), self)
-        self.open_key.activated.connect(self.open_image_folder)
-        # Copy path
-        self.copy_key = QShortcut(QtGui.QKeySequence('C'), self)
-        self.copy_key.activated.connect(self.copy_image_path)
-
-
-        # Delete Image
-        self.copy_key = QShortcut(QtGui.QKeySequence('Ctrl+D'), self)
-        self.copy_key.activated.connect(self.delete_image)
-
-
-        # Grayscale
-        self.quit_key = QShortcut(QtGui.QKeySequence('T'), self)
-        self.quit_key.activated.connect(self.grayscale)
-
-
-
-        # Grid settings shortcut
-        self.grid_settings_shortcut = QShortcut(QtGui.QKeySequence('Ctrl+G'), self)
-        self.grid_settings_shortcut.activated.connect(self.open_grid_settings_dialog)
-
-        # Display grid
-        self.quit_key = QShortcut(QtGui.QKeySequence('G'), self)
-        self.quit_key.activated.connect(self.toggle_grid)
-
-
-        # Zoom In and Zoom Out Shortcuts
-        self.zoom_in_key = QtWidgets.QShortcut(QtGui.QKeySequence('Q'), self)
-        self.zoom_in_key.activated.connect(self.zoom_minus)
-        
-        self.zoom_out_key = QtWidgets.QShortcut(QtGui.QKeySequence('D'), self)
-        self.zoom_out_key.activated.connect(self.zoom_plus)
-
-        # Add Numpad Shortcuts
-        self.zoom_in_numpad_key = QtWidgets.QShortcut(QtGui.QKeySequence(QtCore.Qt.Key_Plus), self)
-        self.zoom_in_numpad_key.activated.connect(self.zoom_plus)
-        
-        self.zoom_out_numpad_key = QtWidgets.QShortcut(QtGui.QKeySequence(QtCore.Qt.Key_Minus), self)
-        self.zoom_out_numpad_key.activated.connect(self.zoom_minus)
-
-
-
-        # Main window shortcut
-        self.show_main_window_shortcut = QtWidgets.QShortcut(QtGui.QKeySequence("Tab"), self)
-        self.show_main_window_shortcut.activated.connect(self.show_main_window)
-
-        # Pause toggle shortcut
-        self.pause_timer_key = QtWidgets.QShortcut(QtGui.QKeySequence("Backspace"), self)
+        self.pause_timer_key = QtWidgets.QShortcut(QtGui.QKeySequence(view.shortcut_settings["session_window"]["pause_timer"]), self)
         self.pause_timer_key.activated.connect(self.pause)
 
+        self.close_key = QtWidgets.QShortcut(QtGui.QKeySequence(view.shortcut_settings["session_window"]["close"]), self)
+        self.close_key.activated.connect(self.close)
 
+        self.next_image_key = QtWidgets.QShortcut(QtGui.QKeySequence(view.shortcut_settings["session_window"]["next_image"]), self)
+        self.next_image_key.activated.connect(self.load_next_image)
 
+        self.open_key = QtWidgets.QShortcut(QtGui.QKeySequence(view.shortcut_settings["session_window"]["open_folder"]), self)
+        self.open_key.activated.connect(self.open_image_folder)
 
+        self.copy_key = QtWidgets.QShortcut(QtGui.QKeySequence(view.shortcut_settings["session_window"]["copy_path"]), self)
+        self.copy_key.activated.connect(self.copy_image_path)
 
+        self.delete_image_key = QtWidgets.QShortcut(QtGui.QKeySequence(view.shortcut_settings["session_window"]["delete_image"]), self)
+        self.delete_image_key.activated.connect(self.delete_image)
 
-        # Mute
-        self.mute_key = QShortcut(QtGui.QKeySequence('M'), self)
+        self.grayscale_key = QtWidgets.QShortcut(QtGui.QKeySequence(view.shortcut_settings["session_window"]["grayscale"]), self)
+        self.grayscale_key.activated.connect(self.grayscale)
+
+        self.grid_settings_key = QtWidgets.QShortcut(QtGui.QKeySequence(view.shortcut_settings["session_window"]["grid_settings"]), self)
+        self.grid_settings_key.activated.connect(self.open_grid_settings_dialog)
+
+        self.grid_key = QtWidgets.QShortcut(QtGui.QKeySequence(view.shortcut_settings["session_window"]["toggle_grid"]), self)
+        self.grid_key.activated.connect(self.toggle_grid)
+
+        self.zoom_in_key = QtWidgets.QShortcut(QtGui.QKeySequence(view.shortcut_settings["session_window"]["zoom_in"]), self)
+        self.zoom_in_key.activated.connect(self.zoom_minus)
+
+        self.zoom_out_key = QtWidgets.QShortcut(QtGui.QKeySequence(view.shortcut_settings["session_window"]["zoom_out"]), self)
+        self.zoom_out_key.activated.connect(self.zoom_plus)
+
+        self.zoom_in_numpad_key = QtWidgets.QShortcut(QtGui.QKeySequence(view.shortcut_settings["session_window"]["zoom_in_numpad"]), self)
+        self.zoom_in_numpad_key.activated.connect(self.zoom_plus)
+
+        self.zoom_out_numpad_key = QtWidgets.QShortcut(QtGui.QKeySequence(view.shortcut_settings["session_window"]["zoom_out_numpad"]), self)
+        self.zoom_out_numpad_key.activated.connect(self.zoom_minus)
+
+        self.show_main_window_shortcut = QtWidgets.QShortcut(QtGui.QKeySequence(view.shortcut_settings["session_window"]["show_main_window"]), self)
+        self.show_main_window_shortcut.activated.connect(self.show_main_window)
+
+        self.mute_key = QtWidgets.QShortcut(QtGui.QKeySequence(view.shortcut_settings["session_window"]["mute"]), self)
         self.mute_key.activated.connect(self.toggle_mute)
-        # Timer
-        self.add_30 = QShortcut(QtGui.QKeySequence('Up'), self)
+
+        self.add_30 = QtWidgets.QShortcut(QtGui.QKeySequence(view.shortcut_settings["session_window"]["add_30_seconds"]), self)
         self.add_30.activated.connect(self.add_30_seconds)
-        self.add_60 = QShortcut(QtGui.QKeySequence('Ctrl+Up'), self)
+
+        self.add_60 = QtWidgets.QShortcut(QtGui.QKeySequence(view.shortcut_settings["session_window"]["add_60_seconds"]), self)
         self.add_60.activated.connect(self.add_60_seconds)
-        self.restart = QShortcut(QtGui.QKeySequence('Ctrl+Shift+Up'), self)
+
+        self.restart = QtWidgets.QShortcut(QtGui.QKeySequence(view.shortcut_settings["session_window"]["restart_timer"]), self)
         self.restart.activated.connect(self.restart_timer)
 
 
@@ -2718,7 +2815,7 @@ class MultiFolderSelector(QtWidgets.QDialog):
         file_dialog = QtWidgets.QFileDialog(self)
         file_dialog.setFileMode(QtWidgets.QFileDialog.DirectoryOnly)
         file_dialog.setOption(QtWidgets.QFileDialog.DontUseNativeDialog, True)
-
+        file_dialog.setWindowFlags(self.windowFlags() & ~QtCore.Qt.WindowContextHelpButtonHint)
         file_view = file_dialog.findChild(QListView, 'listView')
         if file_view:
             file_view.setSelectionMode(QAbstractItemView.MultiSelection)
