@@ -10,7 +10,7 @@ This is a free tool to users can use to practice drawing using references from t
 # New features
 	- Ability to save / rename both image and session presets
 	- Missing / Deleted files gets removed from presets
-	- Autostart  session from previous settings
+	- Autostart session from previous settings
 	- Multiple folder selection
 	- Zoom functions
 	- Grid toggle + Grid settings
