@@ -97,8 +97,8 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
         self.theme_presets_dir = os.path.join(self.presets_dir, 'theme_presets')  # New directory for themes
         self.default_themes_dir = os.path.join(base_dir,'default_themes')  # Default themes directory
 
-        self.default_themes = ['dark_theme.txt', 'light_theme.txt']
-        self.current_theme = "dark_theme.txt"
+        self.default_themes = ['default_theme.txt','dark_theme.txt', 'light_theme.txt']
+        self.current_theme = "default_theme.txt"
 
         print('------------------')
         print(' Base Directory:', base_dir)
@@ -182,7 +182,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
     def ensure_default_themes(self):
         """Ensure default theme files are present in theme_presets_dir and replace any missing or corrupted files."""
 
-        self.current_theme = 'dark_theme.txt'
+        self.current_theme = 'default_theme.txt'
         # Determine the base directory based on whether the app is running as a PyInstaller bundle
         if getattr(sys, 'frozen', False):
             temp_dir = sys._MEIPASS
@@ -234,7 +234,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
     def reset_default_themes(self):
         """Replace corrupted or missing theme files in theme_presets_dir with default ones."""
 
-        self.current_theme = 'dark_theme.txt'
+        self.current_theme = 'default_theme.txt'
         # Determine the base directory based on whether the app is running as a PyInstaller bundle
         if getattr(sys, 'frozen', False):
             temp_dir = sys._MEIPASS
@@ -264,13 +264,13 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
 
                     print(f"THEME RESTAURED : Replaced {theme_file} in {self.theme_presets_dir}")
                     self.init_styles()
-                    self.show_info_message( 'Invalid theme', f'Invalid theme file, theme restaured to default.')
+                    
 
                 except Exception as e:
                     print(f"Error copying {theme_file}: {e}")
             else:
                 print(f"Source theme file {source_file} does not exist.")
-
+        self.show_info_message( 'Invalid theme', f'Invalid theme file, theme restaured to default.')
 
 
 
@@ -324,81 +324,88 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
         to a specific dialog or session window.
         """
 
-
         # Load the selected theme file
-        selected_theme_path = os.path.join(self.theme_presets_dir, self.current_theme) 
+        selected_theme_path = os.path.join(self.theme_presets_dir, self.current_theme)
         if selected_theme_path:
             try:
                 with open(selected_theme_path, 'r') as f:
                     theme_styles = f.read()
-            except:
+            except FileNotFoundError:
                 print("No theme selected or theme file not found. Applying default styles.")
-    
-            try:
+                self.ensure_default_themes()
+                return
 
+            try:
                 # Parse theme styles as JSON
                 styles_dict = json.loads(theme_styles)
 
                 # Apply styles to each element based on the keys in the theme file
-                for element_name, element_styles in styles_dict.items():
-                    if hasattr(self, element_name):
-                        element = getattr(self, element_name)
-                        style_sheet = ""
-                        for selector, style in element_styles.items():
-                            style_sheet += f"{selector} {{{style}}}\n"
-                        element.setStyleSheet(style_sheet)
-                    elif element_name == "MainWindow":
-                        # Apply style directly to the MainWindow
-                        style_sheet = ""
-                        for selector, style in element_styles.items():
-                            style_sheet += f"{selector} {{{style}}}\n"
-                        self.setStyleSheet(style_sheet)
-                    elif dialog and element_name == "dialog_styles":
-                        # Apply styles to the dialog if it matches the name in the theme file
-                        style_sheet = ""
-                        for selector, style in element_styles.items():
-                            style_sheet += f"{selector} {{{style}}}\n"
-                        dialog.setStyleSheet(style_sheet)
+                for element_group, element_styles in styles_dict.items():
+                    # Split group of elements (comma-separated)
+                    element_names = [name.strip() for name in element_group.split(',')]
 
-                    elif dialog_grid and element_name == "GridSettingsDialog":
-                        # Apply styles specifically to GridSettingsDialog
-                        style_sheet = ""
-                        for selector, style in element_styles.items():
-                            style_sheet += f"{selector} {{{style}}}\n"
-                        dialog_grid.setStyleSheet(style_sheet)
+                    for element_name in element_names:
+                        if hasattr(self, element_name):
+                            element = getattr(self, element_name)
+                            style_sheet = ""
+                            for selector, style in element_styles.items():
+                                style_sheet += f"{selector} {{{style}}}\n"
+                            element.setStyleSheet(style_sheet)
+                        elif element_name == "MainWindow":
+                            # Apply style directly to the MainWindow
+                            style_sheet = ""
+                            for selector, style in element_styles.items():
+                                style_sheet += f"{selector} {{{style}}}\n"
+                            self.setStyleSheet(style_sheet)
+                        elif dialog and element_name == "dialog_styles":
+                            # Apply styles to the dialog if it matches the name in the theme file
+                            style_sheet = ""
+                            for selector, style in element_styles.items():
+                                style_sheet += f"{selector} {{{style}}}\n"
+                            dialog.setStyleSheet(style_sheet)
 
-                    elif session and element_name == "session_display":
-                        # Apply style to session_display if it matches the name in the theme file
-                        style_sheet = ""
-                        for selector, style in element_styles.items():
-                            style_sheet += f"{style}\n"
-                        session.setStyleSheet(style_sheet)
+                        elif dialog_grid and element_name == "GridSettingsDialog":
+                            # Apply styles specifically to GridSettingsDialog
+                            style_sheet = ""
+                            for selector, style in element_styles.items():
+                                style_sheet += f"{selector} {{{style}}}\n"
+                            dialog_grid.setStyleSheet(style_sheet)
 
-                        if not "background:" in session.styleSheet():
-                            print('No background color')
-                            session.setStyleSheet("background: rgb(0,0,0)")
+                        elif session and element_name == "session_display":
+                            # Apply style to session_display if it matches the name in the theme file
+                            style_sheet = ""
+                            for selector, style in element_styles.items():
+                                style_sheet += f"{style}\n"
+                            session.setStyleSheet(style_sheet)
 
+                            if "background:" not in session.styleSheet():
+                                print('No background color')
+                                session.setStyleSheet("background: rgb(0,0,0)")
 
-
-                    elif session and element_name == "image_display":
-                        # Apply style to image_display if it matches the name in the theme file
-                        style_sheet = ""
-                        for selector, style in element_styles.items():
-                            style_sheet += f"{selector} {{{style}}}\n"
-                        if hasattr(session, 'image_display'):
-                            session.image_display.setStyleSheet(style_sheet)
-
-
-
-                    elif session and element_name == "session_display_labels":
-                        session_display_label_styles = styles_dict["session_display_labels"]
-                        for label_name in ["session_info", "timer_display"]:
-                            if hasattr(session, label_name):
-                                label = getattr(session, label_name)
-                                style_sheet = ""
-                                for selector, style in session_display_label_styles.items():
+                        elif session and element_name == "text_display":
+                            # Apply style to text_display if it matches the name in the theme file
+                            style_sheet = ""
+                            for selector, style in element_styles.items():
+                                if selector == "highlight_names":
+                                    session.highlight_names_settings=style
+                                elif selector == "highlight_keywords":   
+                                    session.highlight_keywords_settings=style
+                                elif selector == "always_on_top_border":   
+                                    session.always_on_top_borde_settings=style
+                                else:
                                     style_sheet += f"{selector} {{{style}}}\n"
-                                label.setStyleSheet(style_sheet)
+                                if hasattr(session, 'text_display'):
+                                    session.text_display.setStyleSheet(style_sheet)
+
+                        elif session and element_name == "session_display_labels":
+                            session_display_label_styles = styles_dict["session_display_labels"]
+                            for label_name in ["session_info", "timer_display"]:
+                                if hasattr(session, label_name):
+                                    label = getattr(session, label_name)
+                                    style_sheet = ""
+                                    for selector, style in session_display_label_styles.items():
+                                        style_sheet += f"{selector} {{{style}}}\n"
+                                    label.setStyleSheet(style_sheet)
 
                 # Apply font settings to session labels only if specified
                 if session and "label_fonts" in styles_dict:
@@ -419,8 +426,8 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
                 # Apply common button styles to QPushButton widgets
                 if "common_button_styles" in styles_dict:
                     button_styles = styles_dict["common_button_styles"]
-                    for button_name in ["theme_options_button", "add_folders_button", "delete_images_preset",
-                                        "delete_session_preset","save_session_presets_button", "start_session_button", "close_window_button"]:
+                    for button_name in ["theme_options_button", "add_folders_button", "delete_images_preset", "open_preset_button",
+                                        "delete_session_preset", "save_session_presets_button", "start_session_button", "close_window_button"]:
                         if hasattr(self, button_name):
                             button = getattr(self, button_name)
                             style_sheet = ""
@@ -489,7 +496,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
         self.table_images_selection.setItemDelegateForColumn(0, max_length_delegate)
         self.table_session_selection.setItemDelegateForColumn(0, max_length_delegate)
 
-        # Prevent column resizing for table_images_selection
+        # Prevent column resizing for table_sentences_selection
         header_images = self.table_images_selection.horizontalHeader()
         header_images.setSectionResizeMode(QHeaderView.Fixed)
         header_images.setSectionsClickable(False)  # Make header non-clickable
@@ -1096,12 +1103,16 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
 
         # Initialize and run SessionDisplay
         self.display = SessionDisplay(
+            shortcuts=self.shortcut_settings,
             schedule=self.session_schedule,
             items=selected_images,
             total=self.total_scheduled_images
         )
         self.init_styles(session=self.display)
+
+        self.display.load_entry()
         self.display.show()
+
         self.save_session_settings()
 
 
@@ -1146,6 +1157,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
 
 
 
+
     def load_session_settings(self):
         session_settings_path = os.path.join(self.presets_dir, 'session_settings.txt')
 
@@ -1155,7 +1167,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
             "selected_session_row": -1,
             "randomize_settings": False,
             "auto_start_settings": False,
-            "theme_settings": 'dark_theme.txt',
+            "theme_settings": 'default_theme.txt',
             "shortcuts": self.default_shortcuts
         }
 
@@ -1181,7 +1193,11 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
         self.shortcut_settings = current_settings.get('shortcuts', self.default_shortcuts)
         self.randomize_settings = current_settings.get('randomize_settings', False)
         self.auto_start_settings = current_settings.get('auto_start_settings', False)
-        self.current_theme = current_settings.get('theme_settings', 'dark_theme.txt')
+        self.current_theme = current_settings.get('theme_settings', 'default_theme.txt')
+
+        # Toggle the randomize and auto-start settings
+        self.randomize_toggle.setChecked(self.randomize_settings)  # Toggle based on loaded value
+        self.auto_start_toggle.setChecked(self.auto_start_settings)  # Toggle based on loaded value
 
         # --- Row selection logic ---
         selected_image_row = current_settings.get('selected_image_row', -1)
@@ -1198,8 +1214,10 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
         else:
             print("Invalid or out-of-bounds selected_session_row, no selection applied.")
 
+        self.update_selection_cache()
         # Save the session settings after loading them (in case anything needs updating)
         self.save_session_settings()
+
 
     def save_session_settings(self):
         """Save the current session settings to the session_settings.txt file."""
@@ -1325,7 +1343,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
 class SessionDisplay(QWidget, Ui_session_display):
     closed = QtCore.pyqtSignal() # Needed here for close event to work.
 
-    def __init__(self, schedule=None, items=None, total=None):
+    def __init__(self, shortcuts = None, schedule=None, items=None, total=None):
         super().__init__()
         self.setupUi(self)
 
@@ -1343,6 +1361,8 @@ class SessionDisplay(QWidget, Ui_session_display):
         self.rotation_index = 0  # Starting rotation at 0 degrees
         self.rotation_factor = 5  # Rotation increment in degrees
 
+        self.always_on_top_borde_settings = "rgb(255, 0, 0)"
+
 
         self.setWindowFlags(QtCore.Qt.FramelessWindowHint)
 
@@ -1355,6 +1375,7 @@ class SessionDisplay(QWidget, Ui_session_display):
         self.init_sizing()
         self.init_scaling_size()
         self.schedule = schedule
+        self.shortcuts = shortcuts
         self.playlist = items
         self.playlist_position = 0
         self.total_scheduled_images = total
@@ -1368,7 +1389,6 @@ class SessionDisplay(QWidget, Ui_session_display):
         self.init_image_mods()
         self.init_sounds()
         self.init_mixer()
-        self.load_entry()
         self.init_session_buttons()
         self.apply_shortcuts_session_window()
         self.skip_count = 1
@@ -1627,47 +1647,47 @@ class SessionDisplay(QWidget, Ui_session_display):
     def init_session_buttons(self):
         # Session tools
         self.grid_button.clicked.connect(self.toggle_grid)
-        self.grid_button.setToolTip(f"[{view.shortcut_settings['session_window']['toggle_grid']}] Toggle grid, [{view.shortcut_settings['session_window']['grid_settings']}] Grid settings")
+        self.grid_button.setToolTip(f"[{self.shortcuts['session_window']['toggle_grid']}] Toggle grid, [{self.shortcuts['session_window']['grid_settings']}] Grid settings")
         
         self.grayscale_button.clicked.connect(self.grayscale)
-        self.grayscale_button.setToolTip(f"[{view.shortcut_settings['session_window']['grayscale']}] Toggle grayscale")
+        self.grayscale_button.setToolTip(f"[{self.shortcuts['session_window']['grayscale']}] Toggle grayscale")
 
         self.lock_scale_button.clicked.connect(self.toggle_resize)
-        self.lock_scale_button.setToolTip(f"[{view.shortcut_settings['session_window']['toggle_resize']}] Prevent rescaling of the window")
+        self.lock_scale_button.setToolTip(f"[{self.shortcuts['session_window']['toggle_resize']}] Prevent rescaling of the window")
 
         # Vertical and Horizontal flips
         self.flip_horizontal_button.clicked.connect(self.flip_horizontal)
-        self.flip_horizontal_button.setToolTip(f"[{view.shortcut_settings['session_window']['flip_horizontal']}] Horizontal Flip")
+        self.flip_horizontal_button.setToolTip(f"[{self.shortcuts['session_window']['flip_horizontal']}] Horizontal Flip")
 
         self.flip_vertical_button.clicked.connect(self.flip_vertical)
-        self.flip_vertical_button.setToolTip(f"[{view.shortcut_settings['session_window']['flip_vertical']}] Vertical Flip")
+        self.flip_vertical_button.setToolTip(f"[{self.shortcuts['session_window']['flip_vertical']}] Vertical Flip")
 
         # Session navigation
         self.previous_image.clicked.connect(self.load_prev_image)
-        self.previous_image.setToolTip(f"[{view.shortcut_settings['session_window']['prev_image']}] Previous image")
+        self.previous_image.setToolTip(f"[{self.shortcuts['session_window']['prev_image']}] Previous image")
 
         self.pause_timer.clicked.connect(self.pause)
-        self.pause_timer.setToolTip(f"[{view.shortcut_settings['session_window']['pause_timer']}] Pause Timer")
+        self.pause_timer.setToolTip(f"[{self.shortcuts['session_window']['pause_timer']}] Pause Timer")
 
         self.stop_session.clicked.connect(self.close)
-        self.stop_session.setToolTip(f"[{view.shortcut_settings['session_window']['close']}] Stop Session and closes window")
+        self.stop_session.setToolTip(f"[{self.shortcuts['session_window']['close']}] Stop Session and closes window")
 
         self.next_image.clicked.connect(self.load_next_image)
-        self.next_image.setToolTip(f"[{view.shortcut_settings['session_window']['next_image']}] Next Image")
+        self.next_image.setToolTip(f"[{self.shortcuts['session_window']['next_image']}] Next Image")
 
         # Image path and folder
         self.copy_image_path_button.clicked.connect(self.copy_image_path)
-        self.copy_image_path_button.setToolTip(f"[{view.shortcut_settings['session_window']['copy_path']}] Copy image path to clipboard")
+        self.copy_image_path_button.setToolTip(f"[{self.shortcuts['session_window']['copy_path']}] Copy image path to clipboard")
 
         self.open_folder_button.clicked.connect(self.open_image_folder)
-        self.open_folder_button.setToolTip(f"[{view.shortcut_settings['session_window']['open_folder']}] Open image folder")
+        self.open_folder_button.setToolTip(f"[{self.shortcuts['session_window']['open_folder']}] Open image folder")
 
         self.delete_image_button.clicked.connect(self.delete_image)
-        self.delete_image_button.setToolTip(f"[{view.shortcut_settings['session_window']['delete_image']}] Delete image")
+        self.delete_image_button.setToolTip(f"[{self.shortcuts['session_window']['delete_image']}] Delete image")
 
         # Setting window
         self.show_main_window_button.clicked.connect(self.show_main_window)
-        self.show_main_window_button.setToolTip(f"[{view.shortcut_settings['session_window']['show_main_window']}] Open settings window")
+        self.show_main_window_button.setToolTip(f"[{self.shortcuts['session_window']['show_main_window']}] Open settings window")
 
         
         
@@ -1678,80 +1698,81 @@ class SessionDisplay(QWidget, Ui_session_display):
     def apply_shortcuts_session_window(self):
         """Apply the shortcuts for the session window."""
 
-        self.toggle_resize_key = QtWidgets.QShortcut(QtGui.QKeySequence(view.shortcut_settings["session_window"]["toggle_resize"]), self)
+        self.toggle_resize_key = QtWidgets.QShortcut(QtGui.QKeySequence(self.shortcuts["session_window"]["toggle_resize"]), self)
         self.toggle_resize_key.activated.connect(self.toggle_resize)
 
-        self.right_rotation_key = QtWidgets.QShortcut(QtGui.QKeySequence(view.shortcut_settings["session_window"]["rotate_right"]), self)
+        self.right_rotation_key = QtWidgets.QShortcut(QtGui.QKeySequence(self.shortcuts["session_window"]["rotate_right"]), self)
         self.right_rotation_key.activated.connect(self.rotate_image_right)
 
-        self.left_rotation_key = QtWidgets.QShortcut(QtGui.QKeySequence(view.shortcut_settings["session_window"]["rotate_left"]), self)
+        self.left_rotation_key = QtWidgets.QShortcut(QtGui.QKeySequence(self.shortcuts["session_window"]["rotate_left"]), self)
         self.left_rotation_key.activated.connect(self.rotate_image_left)
 
-        self.always_on_top_key = QtWidgets.QShortcut(QtGui.QKeySequence(view.shortcut_settings["session_window"]["always_on_top"]), self)
+        self.always_on_top_key = QtWidgets.QShortcut(QtGui.QKeySequence(self.shortcuts["session_window"]["always_on_top"]), self)
         self.always_on_top_key.activated.connect(self.toggle_always_on_top)
 
-        self.hflip_key = QtWidgets.QShortcut(QtGui.QKeySequence(view.shortcut_settings["session_window"]["flip_horizontal"]), self)
+        self.hflip_key = QtWidgets.QShortcut(QtGui.QKeySequence(self.shortcuts["session_window"]["flip_horizontal"]), self)
         self.hflip_key.activated.connect(self.flip_horizontal)
 
-        self.vflip_key = QtWidgets.QShortcut(QtGui.QKeySequence(view.shortcut_settings["session_window"]["flip_vertical"]), self)
+        self.vflip_key = QtWidgets.QShortcut(QtGui.QKeySequence(self.shortcuts["session_window"]["flip_vertical"]), self)
         self.vflip_key.activated.connect(self.flip_vertical)
 
-        self.prev_image_key = QtWidgets.QShortcut(QtGui.QKeySequence(view.shortcut_settings["session_window"]["prev_image"]), self)
+        self.prev_image_key = QtWidgets.QShortcut(QtGui.QKeySequence(self.shortcuts["session_window"]["prev_image"]), self)
         self.prev_image_key.activated.connect(self.load_prev_image)
 
-        self.pause_timer_key = QtWidgets.QShortcut(QtGui.QKeySequence(view.shortcut_settings["session_window"]["pause_timer"]), self)
+        self.pause_timer_key = QtWidgets.QShortcut(QtGui.QKeySequence(self.shortcuts["session_window"]["pause_timer"]), self)
         self.pause_timer_key.activated.connect(self.pause)
 
-        self.close_key = QtWidgets.QShortcut(QtGui.QKeySequence(view.shortcut_settings["session_window"]["close"]), self)
+        self.close_key = QtWidgets.QShortcut(QtGui.QKeySequence(self.shortcuts["session_window"]["close"]), self)
         self.close_key.activated.connect(self.close)
 
-        self.next_image_key = QtWidgets.QShortcut(QtGui.QKeySequence(view.shortcut_settings["session_window"]["next_image"]), self)
+        self.next_image_key = QtWidgets.QShortcut(QtGui.QKeySequence(self.shortcuts["session_window"]["next_image"]), self)
         self.next_image_key.activated.connect(self.load_next_image)
 
-        self.open_key = QtWidgets.QShortcut(QtGui.QKeySequence(view.shortcut_settings["session_window"]["open_folder"]), self)
+        self.open_key = QtWidgets.QShortcut(QtGui.QKeySequence(self.shortcuts["session_window"]["open_folder"]), self)
         self.open_key.activated.connect(self.open_image_folder)
 
-        self.copy_key = QtWidgets.QShortcut(QtGui.QKeySequence(view.shortcut_settings["session_window"]["copy_path"]), self)
+        self.copy_key = QtWidgets.QShortcut(QtGui.QKeySequence(self.shortcuts["session_window"]["copy_path"]), self)
         self.copy_key.activated.connect(self.copy_image_path)
 
-        self.delete_image_key = QtWidgets.QShortcut(QtGui.QKeySequence(view.shortcut_settings["session_window"]["delete_image"]), self)
+        self.delete_image_key = QtWidgets.QShortcut(QtGui.QKeySequence(self.shortcuts["session_window"]["delete_image"]), self)
         self.delete_image_key.activated.connect(self.delete_image)
 
-        self.grayscale_key = QtWidgets.QShortcut(QtGui.QKeySequence(view.shortcut_settings["session_window"]["grayscale"]), self)
+        self.grayscale_key = QtWidgets.QShortcut(QtGui.QKeySequence(self.shortcuts["session_window"]["grayscale"]), self)
         self.grayscale_key.activated.connect(self.grayscale)
 
-        self.grid_settings_key = QtWidgets.QShortcut(QtGui.QKeySequence(view.shortcut_settings["session_window"]["grid_settings"]), self)
+        self.grid_settings_key = QtWidgets.QShortcut(QtGui.QKeySequence(self.shortcuts["session_window"]["grid_settings"]), self)
         self.grid_settings_key.activated.connect(self.open_grid_settings_dialog)
 
-        self.grid_key = QtWidgets.QShortcut(QtGui.QKeySequence(view.shortcut_settings["session_window"]["toggle_grid"]), self)
+        self.grid_key = QtWidgets.QShortcut(QtGui.QKeySequence(self.shortcuts["session_window"]["toggle_grid"]), self)
         self.grid_key.activated.connect(self.toggle_grid)
 
-        self.zoom_in_key = QtWidgets.QShortcut(QtGui.QKeySequence(view.shortcut_settings["session_window"]["zoom_in"]), self)
+        self.zoom_in_key = QtWidgets.QShortcut(QtGui.QKeySequence(self.shortcuts["session_window"]["zoom_in"]), self)
         self.zoom_in_key.activated.connect(self.zoom_minus)
 
-        self.zoom_out_key = QtWidgets.QShortcut(QtGui.QKeySequence(view.shortcut_settings["session_window"]["zoom_out"]), self)
+        self.zoom_out_key = QtWidgets.QShortcut(QtGui.QKeySequence(self.shortcuts["session_window"]["zoom_out"]), self)
         self.zoom_out_key.activated.connect(self.zoom_plus)
 
-        self.zoom_in_numpad_key = QtWidgets.QShortcut(QtGui.QKeySequence(view.shortcut_settings["session_window"]["zoom_in_numpad"]), self)
+        self.zoom_in_numpad_key = QtWidgets.QShortcut(QtGui.QKeySequence(self.shortcuts["session_window"]["zoom_in_numpad"]), self)
         self.zoom_in_numpad_key.activated.connect(self.zoom_plus)
 
-        self.zoom_out_numpad_key = QtWidgets.QShortcut(QtGui.QKeySequence(view.shortcut_settings["session_window"]["zoom_out_numpad"]), self)
+        self.zoom_out_numpad_key = QtWidgets.QShortcut(QtGui.QKeySequence(self.shortcuts["session_window"]["zoom_out_numpad"]), self)
         self.zoom_out_numpad_key.activated.connect(self.zoom_minus)
 
-        self.show_main_window_shortcut = QtWidgets.QShortcut(QtGui.QKeySequence(view.shortcut_settings["session_window"]["show_main_window"]), self)
+        self.show_main_window_shortcut = QtWidgets.QShortcut(QtGui.QKeySequence(self.shortcuts["session_window"]["show_main_window"]), self)
         self.show_main_window_shortcut.activated.connect(self.show_main_window)
 
-        self.mute_key = QtWidgets.QShortcut(QtGui.QKeySequence(view.shortcut_settings["session_window"]["mute"]), self)
+        self.mute_key = QtWidgets.QShortcut(QtGui.QKeySequence(self.shortcuts["session_window"]["mute"]), self)
         self.mute_key.activated.connect(self.toggle_mute)
 
-        self.add_30 = QtWidgets.QShortcut(QtGui.QKeySequence(view.shortcut_settings["session_window"]["add_30_seconds"]), self)
+        self.add_30 = QtWidgets.QShortcut(QtGui.QKeySequence(self.shortcuts["session_window"]["add_30_seconds"]), self)
         self.add_30.activated.connect(self.add_30_seconds)
 
-        self.add_60 = QtWidgets.QShortcut(QtGui.QKeySequence(view.shortcut_settings["session_window"]["add_60_seconds"]), self)
+        self.add_60 = QtWidgets.QShortcut(QtGui.QKeySequence(self.shortcuts["session_window"]["add_60_seconds"]), self)
         self.add_60.activated.connect(self.add_60_seconds)
 
-        self.restart = QtWidgets.QShortcut(QtGui.QKeySequence(view.shortcut_settings["session_window"]["restart_timer"]), self)
+        self.restart = QtWidgets.QShortcut(QtGui.QKeySequence(self.shortcuts["session_window"]["restart_timer"]), self)
         self.restart.activated.connect(self.restart_timer)
+
 
 
 
@@ -1766,7 +1787,7 @@ class SessionDisplay(QWidget, Ui_session_display):
 
         # Disconnect any signals or shortcuts
         try:
-            self.quit_key.activated.disconnect(self.close)
+            self.close
             # Add any other signal disconnections here
         except Exception as e:
             print(f"Error disconnecting signals: {e}")
@@ -2097,18 +2118,6 @@ class SessionDisplay(QWidget, Ui_session_display):
             # Resize the display window once
             self.apply_grid()
 
-    def resize_to_image_size(self, value = 1):
-        """
-        Resize the display window to fit the current image size.
-        """
-        # Get the current image size
-        image_size = self.size()
-        
-        # Set the size of the display window to match the image size
-        self.resize(
-            image_size.width(),
-            image_size.height()
-        )
 
 
     def apply_grid(self, grid_opacity=0.6):
@@ -2232,7 +2241,9 @@ class SessionDisplay(QWidget, Ui_session_display):
         self.grid_overlay.show()
         self.grid_overlay.raise_()  # Ensure it's on top of the image display
 
-    def apply_border(self, show_border=True, border_color=QtCore.Qt.red, border_width=1):
+    def apply_border(self, show_border=True, border_width=1):
+        border_color=self.always_on_top_borde_settings
+
         if show_border:
             self.border_overlay.show()
             self.border_overlay.raise_()  # Make sure it's above all other widgets
@@ -2241,9 +2252,18 @@ class SessionDisplay(QWidget, Ui_session_display):
             border_pixmap = QtGui.QPixmap(self.size())
             border_pixmap.fill(QtCore.Qt.transparent)  # Transparent background
 
+            # Parse the RGB color string into a QColor object
+            if isinstance(border_color, str) and border_color.startswith("rgb"):
+                # Extract the RGB values from the string
+                rgb_values = [int(x) for x in border_color.replace("rgb(", "").replace(")", "").split(",")]
+                q_color = QtGui.QColor(*rgb_values)
+            else:
+                # If it's already a QColor, use it directly
+                q_color = QtGui.QColor(border_color)
+
             # Create a QPainter to draw the border
             painter = QtGui.QPainter(border_pixmap)
-            pen = QtGui.QPen(border_color, border_width)
+            pen = QtGui.QPen(q_color, border_width)
             painter.setPen(pen)
 
             # Draw the border as a rectangle around the edges
@@ -2364,7 +2384,7 @@ class SessionDisplay(QWidget, Ui_session_display):
             )
             
             # Apply the border using the overlay
-            self.apply_border(True, QtCore.Qt.red, 1)
+            self.apply_border(True)
             print('Always on top: On')
         else:
             self.toggle_always_on_top_status = False
@@ -2798,8 +2818,6 @@ class MultiFolderSelector(QtWidgets.QDialog):
         self.ok_button.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.init_message_boxes()
 
-        
-        
     def init_message_boxes(self):
         """Initialize custom message box settings."""
         self.message_box = QtWidgets.QMessageBox(self)
@@ -2810,6 +2828,19 @@ class MultiFolderSelector(QtWidgets.QDialog):
         self.message_box.setWindowTitle(title)
         self.message_box.setText(message)
         self.message_box.exec_()
+
+    def format_folder_path(self, folder_path):
+        """Format the folder path to display only the end part."""
+        # Normalize the path to use backslashes
+        normalized_path = folder_path.replace('/', os.sep).replace('\\', os.sep)
+
+        # Split the normalized path into parts
+        parts = normalized_path.split(os.sep)
+
+        # If there are more than 3 parts, show the last three parts
+        if len(parts) > 3:
+            return '...\\' + os.sep.join(parts[-3:])  # Show the last three parts of the path
+        return normalized_path  # If less than or equal, return as is
 
     def multi_select_folders(self):
         file_dialog = QtWidgets.QFileDialog(self)
@@ -2829,13 +2860,28 @@ class MultiFolderSelector(QtWidgets.QDialog):
             for folder in folders:
                 if folder and folder not in self.selected_folders:
                     self.selected_folders.append(folder)
-                    self.list_widget.addItem(folder)
+                    formatted_path = self.format_folder_path(folder)  # Format the folder path
+                    self.list_widget.addItem(formatted_path)  # Display formatted path
 
     def remove_folder(self):
         selected_items = self.list_widget.selectedItems()
         if selected_items:
             for item in selected_items:
-                self.selected_folders.remove(item.text())
+                # Find the full path corresponding to the formatted path in the list
+                formatted_path = item.text()
+                full_path = None
+
+                # Iterate through the selected_folders to find the matching full path
+                for folder in self.selected_folders:
+                    if self.format_folder_path(folder) == formatted_path:
+                        full_path = folder
+                        break
+
+                # If full path is found, remove it
+                if full_path:
+                    self.selected_folders.remove(full_path)
+
+                # Remove the item from the list widget
                 self.list_widget.takeItem(self.list_widget.row(item))
 
     def get_selected_folders(self):
@@ -2861,7 +2907,7 @@ class MultiFolderSelector(QtWidgets.QDialog):
         preset_filepath = os.path.join(images_presets_dir, preset_filename)
 
         if os.path.exists(preset_filepath):
-            self.show_info_message( 'Duplicate Preset', f'The preset "{preset_name}" already exists. Please choose a different name.')
+            self.show_info_message('Duplicate Preset', f'The preset "{preset_name}" already exists. Please choose a different name.')
             return  # Do not accept the dialog
 
         super(MultiFolderSelector, self).accept()
@@ -2931,10 +2977,20 @@ class ThemeSelectorDialog(QtWidgets.QDialog):
     def load_theme_files(self):
         """Load theme files from the theme presets directory and set the current theme as selected."""
         theme_files = [f for f in os.listdir(self.theme_presets_dir) if f.endswith('.txt')]
-        theme_files.sort()  # Sort files for consistent order if needed
 
-        for theme_file in theme_files:
-            theme_name = theme_file.replace('.txt', '')  # Remove the .txt extension
+        # Separate the default theme, if it exists
+        default_theme = "default_theme.txt"
+        other_themes = [f for f in theme_files if f != default_theme]
+
+        # Sort the other themes alphabetically
+        sorted_themes = sorted([f.replace('.txt', '') for f in other_themes])
+
+        # Add the default theme at the top
+        if default_theme in theme_files:
+            sorted_themes.insert(0, default_theme.replace('.txt', ''))
+
+        # Add themes to the list widget
+        for theme_name in sorted_themes:
             item = QtWidgets.QListWidgetItem(theme_name)
             if theme_name == self.current_theme:
                 item.setSelected(True)

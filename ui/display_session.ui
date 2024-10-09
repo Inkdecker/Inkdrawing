@@ -155,7 +155,7 @@
           </font>
          </property>
          <property name="cursor">
-          <cursorShape>IBeamCursor</cursorShape>
+          <cursorShape>ArrowCursor</cursorShape>
          </property>
          <property name="autoFillBackground">
           <bool>false</bool>
@@ -170,7 +170,7 @@
           <set>Qt::AlignCenter</set>
          </property>
          <property name="textInteractionFlags">
-          <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
+          <set>Qt::LinksAccessibleByMouse</set>
          </property>
         </widget>
        </item>
