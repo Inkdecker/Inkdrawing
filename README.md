@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://github.com/Inkdecker/session_drawing/blob/main/ui/resources/icons/sample.png" alt="Project Screenshot" width="400"/>
+</p>
+
 # Session_drawing
 
 Rework of adnv3k's GestureSesh app :
