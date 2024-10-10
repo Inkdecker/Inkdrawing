@@ -23,7 +23,11 @@
     <file>icons/theme_icon_4.png</file>
     <file>icons/_Blank.ico</file>
     <file>icons/_Blank.png</file>
-    <file>icons/_Blank.png</file>
+    <file>icons/session_drawing.ico</file>
+    <file>icons/session_drawing.png</file>
+
+
+    
   </qresource>
 
 </RCC>
