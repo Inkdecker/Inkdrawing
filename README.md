@@ -35,11 +35,12 @@ This is a free tool to users can use to practice drawing using references from t
 
 
 ## Troubleshooting
-- Delete the session_settings.txt and restart the executable to reset settings and shortcuts.
-- Delete the preset folder and restart the executable to reset everything back to default.
+- Delete the **session_settings.txt** and restart the executable to reset settings and shortcuts.
+- Delete the **preset folder** and restart the executable to reset everything back to default.
 
 
 ## Default Hotkeys
+All hotkeys can be modified through the **session_settings.txt** inside the preset folder, however, be careful not to duplicate the keys.
 ### Configuration window:
 Button | Hotkey
 ------------ | -------------
