@@ -216,8 +216,8 @@
    <string>Reference Practice</string>
   </property>
   <property name="windowIcon">
-   <iconset>
-    <normaloff>resources/icons/session_drawing.ico</normaloff>resources/icons/session_drawing.ico</iconset>
+   <iconset resource="resources/resources_config.qrc">
+    <normaloff>:/icons/icons/session_drawing.png</normaloff>:/icons/icons/session_drawing.png</iconset>
   </property>
   <property name="windowOpacity">
    <double>4.000000000000000</double>
@@ -451,6 +451,13 @@
            <number>253</number>
           </property>
           <item>
+           <widget class="QLabel" name="label">
+            <property name="text">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;img src=&quot;:/icons/icons/session_drawing_48x48.png&quot;/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QLabel" name="select_images">
             <property name="minimumSize">
              <size>
@@ -475,7 +482,7 @@
              <string notr="true">color: 'white';</string>
             </property>
             <property name="text">
-             <string>Images presets</string>
+             <string>  Images presets</string>
             </property>
            </widget>
           </item>
