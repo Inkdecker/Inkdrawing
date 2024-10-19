@@ -35,11 +35,13 @@ This is a free tool to users can use to practice drawing using references from t
 
 
 ## Troubleshooting
-- Delete the session_settings.txt and restart the executable to reset settings and shortcuts.
-- Delete the preset folder and restart the executable to reset everything back to default.
+- Delete the **session_settings.txt** and restart the executable to reset settings and shortcuts.
+- Delete the **preset folder** and restart the executable to reset everything back to default.
 
 
 ## Default Hotkeys
+All **hotkeys** can be modified through the **session_settings.txt** inside the preset folder, however, be careful as <ins>duplicate the keys get disabled</ins>.
+
 ### Configuration window:
 Button | Hotkey
 ------------ | -------------
@@ -72,3 +74,6 @@ Open setting window | Tab
 Add 30s | Up Arrow Key
 Add 1 Minute | Ctrl + Up Arrow Key
 Reset timer | Ctrl + Shift + Up Arrow Key
+
+## Licence
+[GNU General Public License v3.0](https://github.com/Inkdecker/session_drawing/blob/main/LICENSE)
