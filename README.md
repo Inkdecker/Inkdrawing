@@ -67,7 +67,7 @@ Previous Image | Left Arrow Key
 Stop | Esc 
 Pause | Spacebar
 Next Image | Right Arrow Key
-Copy image path | C
+Copy image path | Ctrl + C
 Open image folder | O
 Delete image | Ctrl + D
 Open setting window | Tab
