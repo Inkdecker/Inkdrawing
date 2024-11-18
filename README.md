@@ -38,6 +38,8 @@ This is a free tool to users can use to practice drawing using references from t
 - Delete the **session_settings.txt** and restart the executable to reset settings and shortcuts.
 - Delete the **preset folder** and restart the executable to reset everything back to default.
 
+- Note : Using images with atypical characters in their filenames might sometimes cause a crash.
+
 
 ## Default Hotkeys
 All **hotkeys** can be modified through the **session_settings.txt** inside the preset folder, however, be careful as <ins>duplicate the keys get disabled</ins>.
