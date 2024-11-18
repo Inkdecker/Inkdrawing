@@ -62,7 +62,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
                 "close": "Escape",
                 "next_image": "Right",
                 "open_folder": "O",
-                "copy_path": "C",
+                "copy_path": "Ctrl+C",
                 "delete_image": "Ctrl+D",
                 "grayscale": "T",
                 "grid_settings": "Ctrl+G",
@@ -941,8 +941,12 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
                 # Count the number of image file paths in the text file
                 image_count = 0
                 file_path = os.path.join(self.images_presets_dir, filename)
-                with open(file_path, 'r') as file:
-                    image_count = len(file.readlines())
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as file:
+                        image_count = len(file.readlines())
+                except UnicodeDecodeError as e:
+                    print(f"Error decoding file {file_path}: {e}")
+
 
                 # Add the image count to the second column
                 count_item = QTableWidgetItem(str(image_count))
@@ -1153,7 +1157,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
 
             # Read image paths from the image preset file
             try:
-                with open(image_file_path, 'r') as f:
+                with open(image_file_path, 'r', encoding='utf-8') as f:
                     selected_images = [line.strip() for line in f.readlines() if line.strip()]
                     print(f"Loaded {len(selected_images)} images from {image_file_path}.")
             except FileNotFoundError:
@@ -1166,7 +1170,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
 
             # Save the updated list of images back to the preset file
             try:
-                with open(image_file_path, 'w') as f:
+                with open(image_file_path, 'w', encoding='utf-8') as f:
                     f.writelines([img + '\n' for img in selected_images])
                     print(f"Updated image preset file saved: {image_file_path}")
             except IOError as e:

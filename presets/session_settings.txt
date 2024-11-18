@@ -1,8 +1,8 @@
 {
-    "selected_image_row": 0,
+    "selected_image_row": 7,
     "selected_session_row": 0,
     "randomize_settings": true,
-    "auto_start_settings": false,
+    "auto_start_settings": true,
     "theme_settings": "default_theme.txt",
     "shortcuts": {
         "main_window": {
@@ -21,7 +21,7 @@
             "close": "Escape",
             "next_image": "Right",
             "open_folder": "O",
-            "copy_path": "C",
+            "copy_path": "Ctrl+C",
             "delete_image": "Ctrl+D",
             "grayscale": "T",
             "grid_settings": "Ctrl+G",
