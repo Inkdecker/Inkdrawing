@@ -1,8 +1,8 @@
 {
-    "selected_image_row": 7,
-    "selected_session_row": 0,
-    "randomize_settings": true,
-    "auto_start_settings": true,
+    "selected_image_row": 1,
+    "selected_session_row": -1,
+    "randomize_settings": false,
+    "auto_start_settings": false,
     "theme_settings": "default_theme.txt",
     "shortcuts": {
         "main_window": {

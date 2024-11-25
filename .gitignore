@@ -1,10 +1,10 @@
 __pycache__/
 build/
 dist/
-presets/images_presets/
-presets/session_presets/
-presets/theme_presets/
-session_writing/presets/session_settings.txt
+drawing_presets/images_presets/
+drawing_presets/session_presets/
+drawing_presets/theme_presets/
+session_drawing/drawing_presets/session_settings.txt
 
 Test folder/
 
