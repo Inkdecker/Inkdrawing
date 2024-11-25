@@ -34,13 +34,13 @@ This is a free tool to users can use to practice drawing using references from t
 
 1 - Click **"Add Folders"**, then select 1 or more folders containing image files **(.jpg, .jpeg, .png, .webp, .tiff, .jfif, .bmp)** you wish to use for practice.
 
-	Note : You can drag your favorite folders to the left column of the explorer to pin them for a quick access.
+>Note : You can drag your favorite folders to the left column of the explorer to pin them for a quick access.
 
 2 - Create or select a preset with the settings that you want to use for the session.
 
 3 - Click "Start" to begin the session.
 
-	Note: You can select "Randomize" to shuffle the pictures and "Start session" to automatically start the session whenever the program is launched.
+>Note: You can select "Randomize" to shuffle the pictures and "Start session" to automatically start the session whenever the program is launched using your latest settings.
 
 
 ## Troubleshooting
