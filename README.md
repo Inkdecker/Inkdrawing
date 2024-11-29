@@ -34,7 +34,7 @@ This is a free tool to users can use to practice drawing using references from t
 
 1 - Click **"Add Folders"**, then select 1 or more folders containing image files **(.jpg, .jpeg, .png, .webp, .tiff, .jfif, .bmp)** you wish to use for practice.
 
->Note : You can drag your favorite folders to the left column of the explorer to pin them for a quick access.
+>Note : You can drag your favorite folders to the left column of the explorer to pin them for a quick access. Right click to remove them.
 
 2 - Create or select a preset with the settings that you want to use for the session.
 
