@@ -62,9 +62,9 @@ Close Window | Escape
 ### Session Window: 
 Button | Hotkey
 ------------ | -------------
-Zoom + | Q, Numpad +, Mousewheel
+Zoom + | S, Numpad +, Mousewheel
 Zoom - | D, Numpad -, Mousewheel
-Rotate Right | S, Ctrl + Mousewheel
+Rotate Right | Q, Ctrl + Mousewheel
 Rotate Left | F, Ctrl + Mousewheel
 Toggle grid | G
 Toggle grid settings | Ctrl + G
