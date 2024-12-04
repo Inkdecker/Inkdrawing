@@ -52,7 +52,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
             },
             "session_window": {
                 "toggle_resize": "R",
-                "rotate_right": "S",
+                "rotate_right": "Q",
                 "rotate_left": "F",
                 "always_on_top": "A",
                 "flip_horizontal": "H",
@@ -67,7 +67,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
                 "grayscale": "T",
                 "grid_settings": "Ctrl+G",
                 "toggle_grid": "G",
-                "zoom_in": "Q",
+                "zoom_in": "S",
                 "zoom_out": "D",
                 "zoom_in_numpad": "+",
                 "zoom_out_numpad": "-",
@@ -128,7 +128,6 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
 
 
         self.init_styles()
-        self.init_message_boxes()
 
         self.presets = {}  # This should be defined or loaded as needed
 
@@ -174,7 +173,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
         self.message_box.setIcon(QtWidgets.QMessageBox.NoIcon)  # Set to no icon by default
     
     def show_info_message(self, title, message):
-        """Show an information message box without an icon."""
+
         self.message_box.setWindowTitle(title)
         self.message_box.setText(message)
         self.message_box.exec_()
@@ -319,7 +318,6 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
 
 
 
-
     def init_styles(self, dialog=None, dialog_grid=None, session=None):
         """
         Initialize custom styles for various UI elements including buttons, spin boxes,
@@ -376,6 +374,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
                                     style_sheet += f"{selector} {{{style}}}\n"
 
                             self.setStyleSheet(style_sheet)
+                            self.init_message_boxes()
 
       
 
@@ -398,12 +397,22 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
                             # Apply style to session_display if it matches the name in the theme file
                             style_sheet = ""
                             for selector, style in element_styles.items():
+                                if selector == "window_icon":
+                                    if self.temp_dir : 
+                                        file_path = os.path.join(self.temp_dir, style)
+                                    else: 
+                                        file_path = os.path.join(self.base_dir, style)
+                                    session.setWindowIcon(QtGui.QIcon(file_path))
+
                                 style_sheet += f"{style}\n"
                             session.setStyleSheet(style_sheet)
 
                             if "background:" not in session.styleSheet():
                                 print('No background color')
                                 session.setStyleSheet("background: rgb(0,0,0)")
+
+
+
 
                         elif session and element_name == "text_display":
                             # Apply style to text_display if it matches the name in the theme file
@@ -519,7 +528,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
         self.table_images_selection.setItemDelegateForColumn(0, max_length_delegate)
         self.table_session_selection.setItemDelegateForColumn(0, max_length_delegate)
 
-        # Prevent column resizing for table_sentences_selection
+        # Prevent column resizing for table_imagess_selection
         header_images = self.table_images_selection.horizontalHeader()
         header_images.setSectionResizeMode(QHeaderView.Fixed)
         header_images.setSectionsClickable(False)  # Make header non-clickable
@@ -802,11 +811,8 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
         self.load_presets(use_cache=False)
 
 
-
-
     def rename_presets(self, item):
         """Rename the preset file based on the new text typed in the row."""
-
         try:
             # Determine which table triggered the rename
             if item.tableWidget() == self.table_images_selection:
@@ -816,50 +822,42 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
                 cache = self.session_names_cache
                 rename_directory = self.session_presets_dir
             else:
-                # Unexpected table widget, exit early
-                return
-            row = item.row()
-            if row >= len(cache):
-                
                 return
 
-            # Get the old filename from the cache
+            row = item.row()
+            if row >= len(cache) or row < 0:
+                print(f"Invalid row: {row}")
+                return
+
+            # Original and new filenames
             old_filename = cache[row]
             new_filename = item.text().strip() + ".txt"
-            
-            # Debugging output
-            print(f"Row: {row}")
-            print(f"Old filename: {old_filename}")
-            print(f"New filename: {new_filename}")
 
+            # File paths
             old_filepath = os.path.join(rename_directory, old_filename)
             new_filepath = os.path.join(rename_directory, new_filename)
 
-            # Check if the old file exists
             if not os.path.exists(old_filepath):
-                self.show_info_message('Error', f"Cannot rename: Original file '{old_filename}' does not exist.")
-                self.load_presets(use_cache=False)  # Reload to revert to old name
+                print(f"File not found: {old_filepath}")
+                self.load_presets(use_cache=False)
                 return
 
-            # Check if the new filename already exists or if it is invalid
+            # Check if the new file already exists
             if os.path.exists(new_filepath):
-                self.show_info_message( 'Error', f"Cannot rename: '{new_filename}' already exists.")
-                self.load_presets(use_cache=False)  # Reload to revert to old name
+                print(f"File already exists: {new_filepath}")
+                self.show_info_message('Error', f"Cannot rename: '{new_filename}' already exists.")
+                self.load_presets(use_cache=False)  # Reload to revert changes
                 return
 
-
-            # Rename the file
+            # Attempt to rename
             os.rename(old_filepath, new_filepath)
-            #self.show_info_message( 'Success', f"Preset renamed successfully to {new_filename}")
-
-            # Update the cache after renaming
+            print(f"Renamed: {old_filepath} -> {new_filepath}")
             cache[row] = new_filename
 
-
         except Exception as e:
+            print(f"Error renaming preset: {e}")
             self.show_info_message('Error', f"Failed to rename preset. Error: {str(e)}")
-            self.load_presets(use_cache=True)  # Reload to revert to old name
-
+            self.load_presets(use_cache=True)  # Revert to the old name
 
 
 
@@ -881,7 +879,9 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
         self.load_session_presets(use_cache)
 
 
-        self.select_rows_from_cache(use_cache)    
+
+        self.select_rows_from_cache(use_cache)  
+  
 
 
         
@@ -1495,6 +1495,7 @@ class SessionDisplay(QWidget, Ui_session_display):
 
     def show_main_window(self):
         view.show()              # Show the main window
+        view.init_styles()  # Initialize window style 
         view.raise_()            # Bring the window to the front
         view.activateWindow()    # Focus on the window
 
@@ -2869,22 +2870,33 @@ class MultiFolderSelector(QtWidgets.QDialog):
             return '...\\' + os.sep.join(parts[-3:])  # Show the last three parts of the path
         return normalized_path  # If less than or equal, return as is
 
-        
+      
     def multi_select_folders(self):
         file_dialog = QtWidgets.QFileDialog(self)
         file_dialog.setFileMode(QtWidgets.QFileDialog.DirectoryOnly)
         file_dialog.setOption(QtWidgets.QFileDialog.DontUseNativeDialog, True)
         file_dialog.setWindowFlags(self.windowFlags() & ~QtCore.Qt.WindowContextHelpButtonHint)
 
-        file_view = file_dialog.findChild(QListView, 'listView')
+        file_view = file_dialog.findChild(QtWidgets.QListView, 'listView')
         if file_view:
-            file_view.setSelectionMode(QAbstractItemView.MultiSelection)
+            file_view.setSelectionMode(QtWidgets.QAbstractItemView.MultiSelection)
 
-        f_tree_view = file_dialog.findChild(QTreeView)
+        f_tree_view = file_dialog.findChild(QtWidgets.QTreeView)
         if f_tree_view:
-            f_tree_view.setSelectionMode(QAbstractItemView.MultiSelection)
+            f_tree_view.setSelectionMode(QtWidgets.QAbstractItemView.MultiSelection)
 
-        # Variable to store the last navigated directory
+            # Customize the columns
+            header = f_tree_view.header()
+            header.setStretchLastSection(True)  # Enable stretching for the last column
+            header.setSectionsMovable(True)    # Allow columns to be reordered
+            header.setSectionsClickable(True)  # Allow column header interaction
+            header.setSectionResizeMode(QtWidgets.QHeaderView.Interactive)  # Enable resizing for all columns
+
+            # Set column visibility for desired columns: Name, Size, Type, Date Modified
+            for col_index in range(header.count()):
+                if col_index not in [0, 1, 2, 3]:  # Adjust these indices to match your desired columns
+                    header.hideSection(col_index)
+
         last_directory = None
 
         def update_last_directory(directory):
@@ -2895,13 +2907,7 @@ class MultiFolderSelector(QtWidgets.QDialog):
 
         if file_dialog.exec():
             folders = file_dialog.selectedFiles()
-
-            # Filter out the parent directory if included mistakenly
-            filtered_folders = [
-                folder for folder in folders if folder != last_directory
-            ]
-
-            # Add the filtered folders to the selected list
+            filtered_folders = [folder for folder in folders if folder != last_directory]
             for folder in filtered_folders:
                 if folder and folder not in self.selected_folders:
                     self.selected_folders.append(folder)
@@ -2975,6 +2981,7 @@ class ThemeSelectorDialog(QtWidgets.QDialog):
         self.theme_presets_dir = theme_presets_dir
         self.current_theme = self.load_current_theme(session_settings_file)
 
+
         # Initialize selected theme
         self.selected_theme = None
 
@@ -2983,7 +2990,11 @@ class ThemeSelectorDialog(QtWidgets.QDialog):
 
         # List widget to display theme files
         self.list_widget = QtWidgets.QListWidget(self)
+
         layout.addWidget(self.list_widget)
+
+        
+        
 
         # Populate list with theme files
         self.load_theme_files()
@@ -3039,8 +3050,10 @@ class ThemeSelectorDialog(QtWidgets.QDialog):
         # Add themes to the list widget
         for theme_name in sorted_themes:
             item = QtWidgets.QListWidgetItem(theme_name)
+
             if theme_name == self.current_theme:
                 item.setSelected(True)
+
                 self.list_widget.setCurrentItem(item)  # Update the current item to reflect the selection
             self.list_widget.addItem(item)
 

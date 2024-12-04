@@ -42,8 +42,8 @@
    <string/>
   </property>
   <property name="windowIcon">
-   <iconset>
-    <normaloff>resources/icons/DARK-32x32.ico</normaloff>resources/icons/DARK-32x32.ico</iconset>
+   <iconset resource="resources/resources_config.qrc">
+    <normaloff>:/icons/icons/session_drawing.png</normaloff>:/icons/icons/session_drawing.png</iconset>
   </property>
   <property name="styleSheet">
    <string notr="true">background: rgb(0,0,0)</string>
@@ -136,13 +136,13 @@
          </property>
          <property name="minimumSize">
           <size>
-           <width>70</width>
+           <width>60</width>
            <height>25</height>
           </size>
          </property>
          <property name="maximumSize">
           <size>
-           <width>59</width>
+           <width>70</width>
            <height>25</height>
           </size>
          </property>

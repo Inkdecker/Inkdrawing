@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'C:\Users\PC\Desktop\ART TUTORIALS\SHORTCUTS & STUFF\session_drawing\ui\display_session.ui'
+# Form implementation generated from reading ui file 'C:\Users\Adamska\Desktop\ART TUTORIALS\SHORTCUTS & STUFF\session_drawing\ui\display_session.ui'
 #
 # Created by: PyQt5 UI code generator 5.15.11
 #
@@ -30,7 +30,7 @@ class Ui_session_display(object):
         session_display.setContextMenuPolicy(QtCore.Qt.NoContextMenu)
         session_display.setWindowTitle("")
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("C:\\Users\\PC\\Desktop\\ART TUTORIALS\\SHORTCUTS & STUFF\\session_drawing\\ui\\resources/icons/DARK-32x32.ico"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon.addPixmap(QtGui.QPixmap(":/icons/icons/session_drawing.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         session_display.setWindowIcon(icon)
         session_display.setStyleSheet("background: rgb(0,0,0)")
         self.verticalLayout = QtWidgets.QVBoxLayout(session_display)
@@ -72,8 +72,8 @@ class Ui_session_display(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.session_info.sizePolicy().hasHeightForWidth())
         self.session_info.setSizePolicy(sizePolicy)
-        self.session_info.setMinimumSize(QtCore.QSize(70, 25))
-        self.session_info.setMaximumSize(QtCore.QSize(59, 25))
+        self.session_info.setMinimumSize(QtCore.QSize(60, 25))
+        self.session_info.setMaximumSize(QtCore.QSize(70, 25))
         font = QtGui.QFont()
         font.setFamily("MS Shell Dlg 2")
         font.setPointSize(15)

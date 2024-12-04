@@ -515,6 +515,9 @@
             <height>20</height>
            </size>
           </property>
+          <property name="focusPolicy">
+           <enum>Qt::NoFocus</enum>
+          </property>
           <property name="styleSheet">
            <string notr="true">background: rgb(220,220,220); color: 'black';</string>
           </property>
@@ -566,6 +569,9 @@
             <underline>false</underline>
             <strikeout>false</strikeout>
            </font>
+          </property>
+          <property name="focusPolicy">
+           <enum>Qt::NoFocus</enum>
           </property>
           <property name="toolTip">
            <string/>
@@ -693,6 +699,9 @@
               <bold>false</bold>
               <kerning>false</kerning>
              </font>
+            </property>
+            <property name="focusPolicy">
+             <enum>Qt::NoFocus</enum>
             </property>
             <property name="toolTip">
              <string>Remove preset from table and delete its file.</string>
@@ -917,6 +926,9 @@
               <weight>50</weight>
               <bold>false</bold>
              </font>
+            </property>
+            <property name="focusPolicy">
+             <enum>Qt::NoFocus</enum>
             </property>
             <property name="toolTip">
              <string>Add image files from folder(s).</string>
@@ -1158,7 +1170,7 @@
          </font>
         </property>
         <property name="focusPolicy">
-         <enum>Qt::StrongFocus</enum>
+         <enum>Qt::NoFocus</enum>
         </property>
         <property name="toolTip">
          <string>Save preset and add it to the table.</string>
@@ -1201,6 +1213,9 @@
           <bold>false</bold>
          </font>
         </property>
+        <property name="focusPolicy">
+         <enum>Qt::NoFocus</enum>
+        </property>
         <property name="toolTip">
          <string>Remove preset from table and delete its file.</string>
         </property>
@@ -1221,6 +1236,9 @@
         <width>540</width>
         <height>228</height>
        </size>
+      </property>
+      <property name="focusPolicy">
+       <enum>Qt::NoFocus</enum>
       </property>
       <property name="styleSheet">
        <string notr="true">QHeaderView::section {background: rgb(220,220,220); color: 'black'};background: rgb(80,80,80)</string>
@@ -1305,6 +1323,9 @@
           </property>
           <item>
            <widget class="QPushButton" name="close_window_button">
+            <property name="focusPolicy">
+             <enum>Qt::NoFocus</enum>
+            </property>
             <property name="toolTip">
              <string/>
             </property>
@@ -1345,6 +1366,12 @@
         </item>
         <item row="0" column="2">
          <widget class="QPushButton" name="start_session_button">
+          <property name="focusPolicy">
+           <enum>Qt::NoFocus</enum>
+          </property>
+          <property name="contextMenuPolicy">
+           <enum>Qt::PreventContextMenu</enum>
+          </property>
           <property name="toolTip">
            <string/>
           </property>

@@ -1,0 +1,4 @@
+pip install opencv-python
+pip install pygame
+pip install PyQt5
+pip install send2trash

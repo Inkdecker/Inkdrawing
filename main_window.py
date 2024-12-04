@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'C:\Users\PC\Desktop\ART TUTORIALS\SHORTCUTS & STUFF\session_drawing\ui\main_window.ui'
+# Form implementation generated from reading ui file 'C:\Users\Adamska\Desktop\ART TUTORIALS\SHORTCUTS & STUFF\session_drawing\ui\main_window.ui'
 #
 # Created by: PyQt5 UI code generator 5.15.11
 #
@@ -187,6 +187,7 @@ class Ui_MainWindow(object):
         self.theme_options_button = QtWidgets.QPushButton(self.centralwidget)
         self.theme_options_button.setMinimumSize(QtCore.QSize(73, 20))
         self.theme_options_button.setMaximumSize(QtCore.QSize(25, 20))
+        self.theme_options_button.setFocusPolicy(QtCore.Qt.NoFocus)
         self.theme_options_button.setStyleSheet("background: rgb(220,220,220); color: \'black\';")
         self.theme_options_button.setObjectName("theme_options_button")
         self.horizontalLayout_3.addWidget(self.theme_options_button)
@@ -214,6 +215,7 @@ class Ui_MainWindow(object):
         font.setWeight(50)
         font.setStrikeOut(False)
         self.table_images_selection.setFont(font)
+        self.table_images_selection.setFocusPolicy(QtCore.Qt.NoFocus)
         self.table_images_selection.setToolTip("")
         self.table_images_selection.setAutoFillBackground(False)
         self.table_images_selection.setStyleSheet("QHeaderView::section {background: rgb(220,220,220); color: \'black\'};")
@@ -265,6 +267,7 @@ class Ui_MainWindow(object):
         font.setWeight(50)
         font.setKerning(False)
         self.delete_images_preset.setFont(font)
+        self.delete_images_preset.setFocusPolicy(QtCore.Qt.NoFocus)
         self.delete_images_preset.setStyleSheet("background: rgb(220,220,220); color: \'black\';")
         self.delete_images_preset.setIconSize(QtCore.QSize(24, 24))
         self.delete_images_preset.setObjectName("delete_images_preset")
@@ -341,6 +344,7 @@ class Ui_MainWindow(object):
         font.setBold(False)
         font.setWeight(50)
         self.add_folders_button.setFont(font)
+        self.add_folders_button.setFocusPolicy(QtCore.Qt.NoFocus)
         self.add_folders_button.setAutoFillBackground(False)
         self.add_folders_button.setStyleSheet("background: rgb(220,220,220); color: \'black\';")
         self.add_folders_button.setIconSize(QtCore.QSize(24, 24))
@@ -453,7 +457,7 @@ class Ui_MainWindow(object):
         font.setBold(False)
         font.setWeight(50)
         self.save_session_presets_button.setFont(font)
-        self.save_session_presets_button.setFocusPolicy(QtCore.Qt.StrongFocus)
+        self.save_session_presets_button.setFocusPolicy(QtCore.Qt.NoFocus)
         self.save_session_presets_button.setAutoFillBackground(False)
         self.save_session_presets_button.setStyleSheet("background: rgb(220,220,220); color: \'black\';")
         self.save_session_presets_button.setIconSize(QtCore.QSize(24, 24))
@@ -468,12 +472,14 @@ class Ui_MainWindow(object):
         font.setBold(False)
         font.setWeight(50)
         self.delete_session_preset.setFont(font)
+        self.delete_session_preset.setFocusPolicy(QtCore.Qt.NoFocus)
         self.delete_session_preset.setStyleSheet("background: rgb(220,220,220); color: \'black\';")
         self.delete_session_preset.setObjectName("delete_session_preset")
         self.gridLayout.addWidget(self.delete_session_preset, 0, 5, 1, 1)
         self.verticalLayout_4.addLayout(self.gridLayout)
         self.table_session_selection = QtWidgets.QTableWidget(self.centralwidget)
         self.table_session_selection.setMinimumSize(QtCore.QSize(540, 228))
+        self.table_session_selection.setFocusPolicy(QtCore.Qt.NoFocus)
         self.table_session_selection.setStyleSheet("QHeaderView::section {background: rgb(220,220,220); color: \'black\'};background: rgb(80,80,80)")
         self.table_session_selection.setFrameShape(QtWidgets.QFrame.StyledPanel)
         self.table_session_selection.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
@@ -510,6 +516,7 @@ class Ui_MainWindow(object):
         self.horizontalLayout.setContentsMargins(5, -1, 0, -1)
         self.horizontalLayout.setObjectName("horizontalLayout")
         self.close_window_button = QtWidgets.QPushButton(self.centralwidget)
+        self.close_window_button.setFocusPolicy(QtCore.Qt.NoFocus)
         self.close_window_button.setToolTip("")
         self.close_window_button.setStyleSheet("background: rgb(220,220,220); color: \'black\';")
         self.close_window_button.setObjectName("close_window_button")
@@ -522,6 +529,7 @@ class Ui_MainWindow(object):
         self.randomize_toggle.setObjectName("randomize_toggle")
         self.gridLayout_6.addWidget(self.randomize_toggle, 0, 1, 1, 1)
         self.start_session_button = QtWidgets.QPushButton(self.centralwidget)
+        self.start_session_button.setFocusPolicy(QtCore.Qt.NoFocus)
         self.start_session_button.setToolTip("")
         self.start_session_button.setAutoFillBackground(False)
         self.start_session_button.setStyleSheet("background: rgb(220,220,220); color: \'black\';")
