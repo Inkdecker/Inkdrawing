@@ -26,7 +26,7 @@ This is a free tool to users can use to practice drawing using references from t
  	- Image rotation 
   	- Custom shortcuts (Edit the session_settings file, duplicate shortcuts not working)
    
-   	- Latest: Ability to create Rainmeter profiles to export the slideshows
+   	- New: Ability to create Rainmeter profiles to export the slideshows
 
 ##### Supported files :  .jpg, .jpeg, .png, .webp, .tiff, .jfif, .bmp
 
