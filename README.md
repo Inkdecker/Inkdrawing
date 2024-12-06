@@ -25,7 +25,8 @@ This is a free tool to users can use to practice drawing using references from t
  	- File deletion (Deleted files are send to Recycle Bin)
  	- Image rotation 
   	- Custom shortcuts (Edit the session_settings file, duplicate shortcuts not working)
-   	- Ability to create Rainmeter profiles to export the slideshows
+   
+   	- Latest: Ability to create Rainmeter profiles to export the slideshows
 
 ##### Supported files :  .jpg, .jpeg, .png, .webp, .tiff, .jfif, .bmp
 
