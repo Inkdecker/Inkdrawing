@@ -96,9 +96,15 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
         self.presets_dir = os.path.join(self.base_dir, 'drawing_presets')
         self.images_presets_dir = os.path.join(self.presets_dir, 'images_presets')
         self.session_presets_dir = os.path.join(self.presets_dir, 'session_presets')
-        self.theme_presets_dir = os.path.join(self.presets_dir, 'theme_presets')  # New directory for themes
-        self.default_themes_dir = os.path.join(self.base_dir,'default_themes')  # Default themes directory
+        self.theme_presets_dir = os.path.join(self.presets_dir, 'theme_presets') 
+        self.default_themes_dir = os.path.join(self.base_dir,'default_themes')  
 
+
+        self.rainmeter_presets_dir = os.path.join(self.presets_dir,'rainmeter_presets')  
+        self.rainmeter_files_dir = os.path.join(self.base_dir,'rainmeter_files')  
+        self.rainmeter_deleted_files_dir = os.path.join(self.rainmeter_presets_dir,'Deleted Files') 
+
+        
         self.default_themes = ['default_theme.txt','dark_theme.txt', 'light_theme.txt']
         self.current_theme = "default_theme.txt"
 
@@ -107,6 +113,11 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
         print(' Temporary Directory:', self.temp_dir)
         print(' Default Themes Directory:', self.default_themes_dir)
         print(' Theme Presets Directory:', self.theme_presets_dir)
+        
+        print(' Rainmeter Presets Directory:', self.rainmeter_presets_dir)
+        print(' Rainmeter Files Directory:', self.rainmeter_files_dir)
+        print(' Rainmeter Deleted Files Directory:', self.rainmeter_deleted_files_dir)
+
         print('------------------')
 
 
@@ -295,6 +306,11 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
         self.save_session_presets_button.clicked.connect(self.save_session_presets) 
         self.delete_session_preset.clicked.connect(self.delete_presets_files)
 
+        self.open_preset_button.clicked.connect(self.open_preset) 
+
+        # Buttons for rainmeter
+        self.rainmeter_preset_button.clicked.connect(self.create_rainmeter_preset) 
+
         # Start session button with tooltip
         self.start_session_button.clicked.connect(self.start_session_from_files)
         self.start_session_button.setToolTip(f"[{self.shortcut_settings['main_window']['start']}] Start the session.")
@@ -458,7 +474,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
                 # Apply common button styles to QPushButton widgets
                 if "common_button_styles" in styles_dict:
                     button_styles = styles_dict["common_button_styles"]
-                    for button_name in ["theme_options_button", "add_folders_button", "delete_images_preset", "open_preset_button",
+                    for button_name in ["theme_options_button", "add_folders_button", "delete_images_preset", "open_preset_button","rainmeter_preset_button",
                                         "delete_session_preset", "save_session_presets_button", "start_session_button", "close_window_button"]:
                         if hasattr(self, button_name):
                             button = getattr(self, button_name)
@@ -662,7 +678,13 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
         os.makedirs(self.images_presets_dir, exist_ok=True)
         os.makedirs(self.session_presets_dir, exist_ok=True)
         os.makedirs(self.theme_presets_dir, exist_ok=True)  # Create the theme presets directory
-        print(f"Created directories: {self.presets_dir}, {self.images_presets_dir}, {self.session_presets_dir}, {self.theme_presets_dir}")
+
+        os.makedirs(self.rainmeter_presets_dir, exist_ok=True)  # Create the theme presets directory
+        os.makedirs(self.rainmeter_deleted_files_dir, exist_ok=True)  # Create the theme presets directory
+
+
+
+        print(f"Created directories: {self.presets_dir}, {self.images_presets_dir}, {self.session_presets_dir}, {self.theme_presets_dir}, {self.rainmeter_presets_dir}, {self.rainmeter_deleted_files_dir}")
 
 
     def save_session_presets(self):
@@ -772,6 +794,121 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
 
         # Reload the presets
         self.load_presets(use_cache=False)
+
+
+
+    def open_preset(self):
+        """Open the selected preset file in the default text editor."""
+        
+        # Get the selected row
+        selected_row = self.table_images_selection.currentRow()
+        
+        # Check if a row is actually selected
+        if selected_row == -1:
+            return
+
+        # Get the file name from the first column of the selected row
+        file_item = self.table_images_selection.item(selected_row, 0)
+        if not file_item:
+            self.show_info_message('Warning', 'No file associated with the selected preset.')
+            return
+
+        # Construct the full file name and path
+        file_name = file_item.text() + ".txt"
+        file_path = os.path.join(self.images_presets_dir, file_name)
+
+        # Open the file if it exists
+        if os.path.exists(file_path):
+            try:
+                # Open the file with the default text editor (Notepad)
+                subprocess.Popen(['notepad.exe', file_path])
+            except Exception as e:
+                self.show_info_message('Error', f'Failed to open preset. Error: {str(e)}')
+        else:
+            self.show_info_message('Warning', f'File "{file_name}" does not exist.')
+
+
+    def create_rainmeter_preset(self):
+        """Create a Rainmeter preset based on the selected image preset."""
+        # Get the selected row
+        selected_row = self.table_images_selection.currentRow()
+
+        # Check if a row is actually selected
+        if selected_row == -1:
+            self.show_info_message('Warning', 'No preset selected.')
+            return
+
+        # Get the file name from the first column of the selected row
+        file_item = self.table_images_selection.item(selected_row, 0)
+        if not file_item:
+            self.show_info_message('Warning', 'No file associated with the selected preset.')
+            return
+
+        # Construct the preset name
+        preset_name = file_item.text()
+        preset_folder_name = f"rainmeter_image_{preset_name}"
+
+        # Determine the base directory based on whether the app is running as a PyInstaller bundle
+        if getattr(sys, 'frozen', False):
+            temp_dir = sys._MEIPASS
+            self.rainmeter_files_dir = os.path.join(temp_dir, 'rainmeter_files')
+        else:
+            self.rainmeter_files_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'rainmeter_files')
+
+        # Define the destination path
+        destination_folder = os.path.join(self.rainmeter_presets_dir, preset_folder_name)
+
+        # Remove the existing folder if it exists
+        if os.path.exists(destination_folder):
+            for root, dirs, files in os.walk(destination_folder, topdown=False):
+                for file in files:
+                    os.remove(os.path.join(root, file))
+                for dir in dirs:
+                    os.rmdir(os.path.join(root, dir))
+            os.rmdir(destination_folder)
+
+        # Create the destination folder
+        os.makedirs(destination_folder, exist_ok=True)
+
+        # Define file paths
+        ini_file_source = os.path.join(self.rainmeter_files_dir, "IMG_SLIDESHOW.ini")
+        lua_file_source = os.path.join(self.rainmeter_files_dir, "IMG_SLIDESHOW.lua")
+        ini_file_destination = os.path.join(destination_folder, "IMG_SLIDESHOW.ini")
+        lua_file_destination = os.path.join(destination_folder, "IMG_SLIDESHOW.lua")
+
+        try:
+            # Copy the Lua file without modifications
+            if os.path.exists(lua_file_source):
+                with open(lua_file_source, 'rb') as src:
+                    with open(lua_file_destination, 'wb') as dst:
+                        dst.write(src.read())
+            else:
+                raise FileNotFoundError(f"Lua file not found at {lua_file_source}")
+
+            # Read and modify the INI file
+            if os.path.exists(ini_file_source):
+                with open(ini_file_source, "r") as ini_file:
+                    ini_content = ini_file.read()
+
+                # Replace placeholders in the INI file
+                selected_preset_path = os.path.join(self.images_presets_dir, f"{preset_name}.txt")
+                ini_content = ini_content.replace(r'ImagePreset = ImagePreset', r'ImagePreset=' + selected_preset_path)
+                ini_content = ini_content.replace(r'DeletedFilesFolder = DeletedFilesFolder', r'DeletedFilesFolder=' + self.rainmeter_deleted_files_dir + '\\')
+                ini_content = ini_content.replace(r'MouseScrollDownAction = MouseScrollDownAction', r'MouseScrollDownAction =' + f' [!DeactivateConfig "{preset_folder_name}"]')
+
+                # Write the modified content to the destination INI file
+                with open(ini_file_destination, "w") as ini_file:
+                    ini_file.write(ini_content)
+            else:
+                raise FileNotFoundError(f"INI file not found at {ini_file_source}")
+
+            # Open File Explorer and select the newly created folder
+            subprocess.run(["explorer", "/select,", os.path.abspath(destination_folder)])
+
+            self.show_info_message("Success", f'Rainmeter preset "{preset_folder_name}" created successfully!')
+
+        except Exception as e:
+            self.show_info_message("Error", f"Failed to create Rainmeter preset. Error: {str(e)}")
 
 
     def delete_presets_files(self):
@@ -1426,6 +1563,9 @@ class SessionDisplay(QWidget, Ui_session_display):
         self.resizeEvent = self.update_border_overlay_geometry
         self.setMinimumSize(QtCore.QSize(640, 1))
 
+        # Other initialization logic
+        self.old_position = None  # Initialize old_position for dragging
+
 
 
 
@@ -1848,22 +1988,23 @@ class SessionDisplay(QWidget, Ui_session_display):
                 self.zoom_minus()
 
 
-    def mousePressEvent(self, event):
-        """
-        Gets the current position of the cursor as a QPoint instance.
-        """
-        self.old_position = event.globalPos()
-        
-    def mouseMoveEvent(self, event):
-        """
-        Finds the difference of the current cursor position and self.old_position as change.
-        Moves the window by change.
-        Sets self.old_position with the current position of the cursor. 
-        """
-        change = QtCore.QPoint(event.globalPos() - self.old_position)
-        self.move(self.x() + change.x(), self.y() + change.y())
-        self.old_position = event.globalPos()
 
+    def mousePressEvent(self, event):
+        """Capture the mouse press event to initiate dragging."""
+        if event.button() == QtCore.Qt.LeftButton:
+            self.old_position = event.globalPos()
+
+    def mouseMoveEvent(self, event):
+        """Handle the mouse movement for dragging the window."""
+        if event.buttons() == QtCore.Qt.LeftButton and self.old_position:
+            delta = event.globalPos() - self.old_position
+            self.move(self.x() + delta.x(), self.y() + delta.y())
+            self.old_position = event.globalPos()
+
+    def mouseReleaseEvent(self, event):
+        """Reset the dragging state after the mouse button is released."""
+        if event.button() == QtCore.Qt.LeftButton:
+            self.old_position = None
 
     # region Session processing functions
     def eventFilter(self, source, event):
@@ -2964,6 +3105,7 @@ class MultiFolderSelector(QtWidgets.QDialog):
             return  # Do not accept the dialog
 
         super(MultiFolderSelector, self).accept()
+
 
 
 class ThemeSelectorDialog(QtWidgets.QDialog):
