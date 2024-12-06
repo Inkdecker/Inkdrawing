@@ -25,6 +25,7 @@ This is a free tool to users can use to practice drawing using references from t
  	- File deletion (Deleted files are send to Recycle Bin)
  	- Image rotation 
   	- Custom shortcuts (Edit the session_settings file, duplicate shortcuts not working)
+   	- Ability to create Rainmeter profiles to export the slideshows
 
 ##### Supported files :  .jpg, .jpeg, .png, .webp, .tiff, .jfif, .bmp
 
@@ -41,6 +42,12 @@ This is a free tool to users can use to practice drawing using references from t
 3 - Click "Start" to begin the session.
 
 >Note: You can select "Randomize" to shuffle the pictures and "Start session" to automatically start the session whenever the program is launched using your latest settings.
+
+## Rainmeter
+The image profile can be exported and used as rainmeter slideshow. To do so, selected the image presets you to export and press the Rainmeter button. You can then place the created inside your **\RAINMETER\Skins** and then load it.
+> Note: The IMG_SLIDESHOW.ini file can be edited to customise the slideshow.
+> 
+> Deleted image files get send to the \rainmeter_presets\Deleted Files folder. 
 
 
 ## Troubleshooting
@@ -85,6 +92,17 @@ Open setting window | Tab
 Add 30s | Up Arrow Key
 Add 1 Minute | Ctrl + Up Arrow Key
 Reset timer | Ctrl + Shift + Up Arrow Key
+
+### Rainmeter Slideshow: 
+Button | Hotkey
+------------ | -------------
+Previous Image | Left click
+Next Image | Right click
+Open Image File | Middle click
+Copy Image File Path | Scroll up
+Close slideshow | Scroll down
+Move image to \rainmeter_presets\Deleted Files | Mouse button 1
+Open Image folder | Mouse button 2
 
 ## Licence
 [GNU General Public License v3.0](https://github.com/Inkdecker/session_drawing/blob/main/LICENSE)
