@@ -45,7 +45,7 @@ This is a free tool to users can use to practice drawing using references from t
 >Note: You can select "Randomize" to shuffle the pictures and "Start session" to automatically start the session whenever the program is launched using your latest settings.
 
 ## Rainmeter
-The image preset can be exported and used as rainmeter slideshow. To do so, selected the image presets you to export and press the Rainmeter button. You can then place the created profile inside your **\RAINMETER\Skins** folder and then launch it using rainmeter.
+The image preset can be exported and used as rainmeter slideshow. To do so, selected the image preset you want to export and press the [Rainmeter] button. You can then place the created profile inside your **\RAINMETER\Skins** folder and then launch it using rainmeter.
 > Note: The IMG_SLIDESHOW.ini file can be edited to customise the slideshow.
 > 
 > Note: Deleted image files get send to the \rainmeter_presets\Deleted Files folder. 
