@@ -47,7 +47,7 @@ This is a free tool to users can use to practice drawing using references from t
 The image profile can be exported and used as rainmeter slideshow. To do so, selected the image presets you to export and press the Rainmeter button. You can then place the created inside your **\RAINMETER\Skins** and then load it.
 > Note: The IMG_SLIDESHOW.ini file can be edited to customise the slideshow.
 > 
-> Deleted image files get send to the \rainmeter_presets\Deleted Files folder. 
+> Note: Deleted image files get send to the \rainmeter_presets\Deleted Files folder. 
 
 
 ## Troubleshooting
