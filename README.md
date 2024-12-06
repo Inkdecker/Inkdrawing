@@ -102,7 +102,7 @@ Next Image | Right click
 Open Image File | Middle click
 Copy Image File Path | Scroll up
 Close slideshow | Scroll down
-Move image to \rainmeter_presets\Deleted Files | Mouse button 1
+Move image to "..\rainmeter_presets\Deleted Files" | Mouse button 1
 Open Image folder | Mouse button 2
 
 ## Licence
