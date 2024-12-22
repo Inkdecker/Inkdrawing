@@ -1,4 +1,4 @@
-pip install opencv-python
-pip install pygame
-pip install PyQt5
-pip install send2trash
+opencv-python
+pygame
+PyQt5
+send2trash

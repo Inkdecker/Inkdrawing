@@ -306,7 +306,10 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
         self.save_session_presets_button.clicked.connect(self.save_session_presets) 
         self.delete_session_preset.clicked.connect(self.delete_presets_files)
 
-        self.open_preset_button.clicked.connect(self.open_preset) 
+        self.open_preset_button.clicked.connect(self.open_preset)
+
+        self.update_preset_button.clicked.connect(self.update_preset) 
+
 
         # Buttons for rainmeter
         self.rainmeter_preset_button.clicked.connect(self.create_rainmeter_preset) 
@@ -474,7 +477,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
                 # Apply common button styles to QPushButton widgets
                 if "common_button_styles" in styles_dict:
                     button_styles = styles_dict["common_button_styles"]
-                    for button_name in ["theme_options_button", "add_folders_button", "delete_images_preset", "open_preset_button","rainmeter_preset_button",
+                    for button_name in ["theme_options_button", "add_folders_button", "delete_images_preset", "open_preset_button","update_preset_button","rainmeter_preset_button",
                                         "delete_session_preset", "save_session_presets_button", "start_session_button", "close_window_button"]:
                         if hasattr(self, button_name):
                             button = getattr(self, button_name)
@@ -635,7 +638,6 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
                     'Success', f'{preset_name} : {len(checked_files["valid_files"])} file(s) saved to {preset_name}'
                 )
 
-                # Existing code to save the preset...
 
         # Reload presets
         self.load_presets()
@@ -826,6 +828,75 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
                 self.show_info_message('Error', f'Failed to open preset. Error: {str(e)}')
         else:
             self.show_info_message('Warning', f'File "{file_name}" does not exist.')
+
+
+
+    def update_preset(self):
+        """
+        Update the selected preset by refreshing its filepaths.
+
+        Steps:
+        1. Retrieve the filepaths stored in the selected preset.
+        2. Keep only unique directories without filenames.
+        3. Search for image files in those directories.
+        4. Save the updated file list to the preset file.
+        """
+        # Get the selected row
+        selected_row = self.table_images_selection.currentRow()
+
+        # Check if a row is actually selected
+        if selected_row == -1:
+            self.show_info_message('Warning', 'No preset selected for update.')
+            return
+
+        # Get the file name from the first column of the selected row
+        file_item = self.table_images_selection.item(selected_row, 0)
+        if not file_item:
+            self.show_info_message('Warning', 'No file associated with the selected preset.')
+            return
+
+        # Construct the full file name and path
+        preset_name = file_item.text()
+        preset_file_path = os.path.join(self.images_presets_dir, f"{preset_name}.txt")
+
+        if not os.path.exists(preset_file_path):
+            self.show_info_message('Error', f'Preset file "{preset_name}.txt" does not exist.')
+            return
+
+        # Step 1: Retrieve filepaths stored in the preset
+        try:
+            with open(preset_file_path, 'r', encoding='utf-8') as f:
+                filepaths = [line.strip() for line in f if line.strip()]
+        except Exception as e:
+            self.show_info_message('Error', f"Failed to read preset file. Error: {str(e)}")
+            return
+
+        # Step 2: Extract unique directories
+        unique_directories = {os.path.dirname(path) for path in filepaths if os.path.exists(os.path.dirname(path))}
+
+        # Step 3: Search for image files in those directories
+        updated_filepaths = set()
+        for directory in unique_directories:
+            try:
+                for file in os.listdir(directory):
+                    file_path = os.path.join(directory, file)
+                    if os.path.isfile(file_path) and os.path.splitext(file_path)[1].lower() in self.valid_extensions:
+                        updated_filepaths.add(file_path)
+            except PermissionError:
+                print(f"Permission denied for directory: {directory}")
+
+        # Step 4: Save updated filepaths back to the preset
+        try:
+            with open(preset_file_path, 'w', encoding='utf-8') as f:
+                for path in sorted(updated_filepaths):
+                    f.write(path + '\n')
+
+            self.show_info_message('Success', f'Preset "{preset_name}" updated with {len(updated_filepaths)} images.')
+        except Exception as e:
+            self.show_info_message('Error', f"Failed to update preset file. Error: {str(e)}")
+
+        # Reload presets to reflect changes
+        self.load_presets()
 
 
     def create_rainmeter_preset(self):

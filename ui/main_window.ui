@@ -633,8 +633,62 @@
             <property name="topMargin">
              <number>5</number>
             </property>
+           </layout>
+          </item>
+          <item>
+           <widget class="QPushButton" name="open_preset_button">
+            <property name="minimumSize">
+             <size>
+              <width>50</width>
+              <height>22</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>77</width>
+              <height>20</height>
+             </size>
+            </property>
+            <property name="focusPolicy">
+             <enum>Qt::NoFocus</enum>
+            </property>
+            <property name="toolTip">
+             <string/>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">background: rgb(220,220,220); color: 'black';</string>
+            </property>
+            <property name="text">
+             <string>Open preset</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <layout class="QVBoxLayout" name="verticalLayout_3">
+            <property name="spacing">
+             <number>6</number>
+            </property>
+            <property name="leftMargin">
+             <number>0</number>
+            </property>
+            <property name="topMargin">
+             <number>1</number>
+            </property>
+            <property name="bottomMargin">
+             <number>24</number>
+            </property>
             <item>
-             <widget class="QPushButton" name="open_preset_button">
+             <layout class="QVBoxLayout" name="verticalLayout_6"/>
+            </item>
+            <item>
+             <layout class="QVBoxLayout" name="verticalLayout_8">
+              <property name="topMargin">
+               <number>5</number>
+              </property>
+             </layout>
+            </item>
+            <item>
+             <widget class="QPushButton" name="update_preset_button">
               <property name="minimumSize">
                <size>
                 <width>50</width>
@@ -644,38 +698,16 @@
               <property name="maximumSize">
                <size>
                 <width>77</width>
-                <height>20</height>
+                <height>16777215</height>
                </size>
-              </property>
-              <property name="focusPolicy">
-               <enum>Qt::NoFocus</enum>
-              </property>
-              <property name="toolTip">
-               <string/>
               </property>
               <property name="styleSheet">
                <string notr="true">background: rgb(220,220,220); color: 'black';</string>
               </property>
               <property name="text">
-               <string>Open preset</string>
+               <string>Update preset</string>
               </property>
              </widget>
-            </item>
-           </layout>
-          </item>
-          <item>
-           <layout class="QVBoxLayout" name="verticalLayout_3">
-            <property name="leftMargin">
-             <number>10</number>
-            </property>
-            <property name="topMargin">
-             <number>14</number>
-            </property>
-            <property name="bottomMargin">
-             <number>145</number>
-            </property>
-            <item>
-             <layout class="QVBoxLayout" name="verticalLayout_6"/>
             </item>
            </layout>
           </item>
