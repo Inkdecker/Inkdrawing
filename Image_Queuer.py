@@ -917,7 +917,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
 
         # Construct the preset name
         preset_name = file_item.text()
-        preset_folder_name = f"rainmeter_image_{preset_name}"
+        #preset_folder_name = f"rainmeter_image_{preset_name}"
 
         # Determine the base directory based on whether the app is running as a PyInstaller bundle
         if getattr(sys, 'frozen', False):
@@ -927,7 +927,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
             self.rainmeter_files_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'rainmeter_files')
 
         # Define the destination path
-        destination_folder = os.path.join(self.rainmeter_presets_dir, preset_folder_name)
+        destination_folder = os.path.join(self.rainmeter_presets_dir, preset_name)
 
         # Remove the existing folder if it exists
         if os.path.exists(destination_folder):
@@ -965,7 +965,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
                 selected_preset_path = os.path.join(self.images_presets_dir, f"{preset_name}.txt")
                 ini_content = ini_content.replace(r'ImagePreset = ImagePreset', r'ImagePreset=' + selected_preset_path)
                 ini_content = ini_content.replace(r'DeletedFilesFolder = DeletedFilesFolder', r'DeletedFilesFolder=' + self.rainmeter_deleted_files_dir + '\\')
-                ini_content = ini_content.replace(r'MouseScrollDownAction = MouseScrollDownAction', r'MouseScrollDownAction =' + f' [!DeactivateConfig "{preset_folder_name}"]')
+                ini_content = ini_content.replace(r'MouseScrollDownAction = MouseScrollDownAction', r'MouseScrollDownAction =' + f' [!DeactivateConfig "{preset_name}"]')
 
                 # Write the modified content to the destination INI file
                 with open(ini_file_destination, "w") as ini_file:
@@ -976,7 +976,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
             # Open File Explorer and select the newly created folder
             subprocess.run(["explorer", "/select,", os.path.abspath(destination_folder)])
 
-            self.show_info_message("Success", f'Rainmeter preset "{preset_folder_name}" created successfully!')
+            self.show_info_message("Success", f'Rainmeter preset "{preset_name}" created successfully!')
 
         except Exception as e:
             self.show_info_message("Error", f"Failed to create Rainmeter preset. Error: {str(e)}")
