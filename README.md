@@ -28,7 +28,7 @@ This is a free tool to users can use to practice drawing using references from t
    
    	- 04.12.2014 : Ability to create Rainmeter profiles to export the slideshows
     
-   	- 30.12.2014 New: Main functions available from commande line
+   	- (New) 30.12.2014: Main functions available from commande line
 	
 ##### Supported files :  .jpg, .jpeg, .png, .webp, .tiff, .jfif, .bmp
 
@@ -51,6 +51,39 @@ The image preset can be exported and used as rainmeter slideshow. To do so, sele
 > Note: The IMG_SLIDESHOW.ini file can be edited to customise the slideshow. Most variables can be found in the [Variables] section.
 > 
 > Note: Deleted image files get send to the "..\rainmeter_presets\Deleted Files" folder. 
+
+## Command line
+### Create preset
+- **create_preset**
+  - **`-folder_list` (required)**: Path(s) to the folder(s) containing image files
+  - **`-preset_name` (optional)**: Name of the preset |  *Default*: `"preset_output"`
+  - **`-output_folder` (optional)**: Folder to save the preset file
+ 
+##### Example :
+```batch
+Image_Queuer.exe create_preset -folder_list "D:\Desktop\Image_Folder_1" "D:\Desktop\Image_Folder_2" -preset_name "Image_preset_1" -output_folder "D:\Desktop\Output_Folder"
+```
+
+### Update preset
+- **update_preset**
+  - **`-preset_path` (required)**: Path of the preset to update
+  - 
+##### Example :
+```batch
+Image_Queuer.exe update_preset -preset_path "D:\Desktop\Image_preset_1.txt"
+```
+
+### Start session
+- **start_session_from_files**
+  - **`-image_preset_path` (required)**: Path to the image preset file
+  - **`-session_preset_path` (required)**: Path to the session preset file
+  - **`-randomize_settings` (optional)**: Randomize settings (`True`/`False`)  |  *Default*: `True`
+ 
+##### Example :
+```batch
+Image_Queuer.exe start_session_from_files -image_preset_path "D:\Desktop\Image_preset_1.txt" -session_preset_path "D:\Desktop\Session_preset_1.txt" -randomize_settings True
+```
+
 
 
 ## Troubleshooting
