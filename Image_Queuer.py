@@ -577,7 +577,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
         print("cache session_selection_cache", selected_preset_row)
 
 
-    def create_preset(self, folder_list=None, preset_name=None, is_gui=True):
+    def create_preset(self, folder_list=None, preset_name=None, output_folder=None, is_gui=True):
         """
         Opens a dialog to select multiple folders or processes a given list of folders.
         For command-line usage, folder_list and preset_name are used directly, and is_gui is set to False.
@@ -626,8 +626,12 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
         # Validate files
         checked_files = self.check_files(all_files)
 
+        # Determine the output folder
+        target_folder = output_folder if output_folder else self.images_presets_dir
+        os.makedirs(target_folder, exist_ok=True)
+
         # Write valid file paths to the preset file
-        preset_filename = os.path.join(self.images_presets_dir, f'{preset_name}.txt')
+        preset_filename = os.path.join(target_folder, f'{preset_name}.txt')
         with open(preset_filename, 'w', encoding='utf-8') as f:
             for file_path in sorted(checked_files['valid_files']):
                 formatted_path = os.path.normpath(file_path)  # Normalize to platform-specific path separators
@@ -647,16 +651,15 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
                 )
             else:
                 self.show_info_message(
-                    'Success', f'{preset_name} : {valid_count} file(s) saved to {preset_name}'
+                    'Success', f'{preset_name} : {valid_count} file(s) saved to {preset_filename}'
                 )
             # Reload presets
             self.load_presets()
         else:
             # Print output for command-line usage
-            print(f'Preset "{preset_name}" created with {valid_count} valid file(s).')
+            print(f'Preset "{preset_name}" created with {valid_count} valid file(s) and saved to {preset_filename}.')
             if invalid_count:
                 print(f'{invalid_count} invalid file(s) were not added. Supported file types: {", ".join(self.valid_extensions)}.')
-
 
 
     def get_next_preset_number(self):
@@ -3273,6 +3276,8 @@ class ThemeSelectorDialog(QtWidgets.QDialog):
         """Get the selected theme."""
         return self.selected_theme 
 
+
+
 if __name__ == "__main__":
     import sys
     import argparse
@@ -3288,7 +3293,7 @@ if __name__ == "__main__":
     create_preset_parser = subparsers.add_parser("create_preset", help="Open a folder and process its contents")
     create_preset_parser.add_argument("-folder_list", required=True, nargs="+", help="List of folder paths to use instead of dialog")
     create_preset_parser.add_argument("-preset_name", default="preset_output", help="Name of the preset to use instead of dialog")
-
+    create_preset_parser.add_argument("-output_folder", default=None, help="Folder to save the preset file. Defaults to images_presets_dir if not provided.")
 
     # Subparser for "update_preset"
     update_preset_parser = subparsers.add_parser("update_preset", help="Update a preset with refreshed file paths")
@@ -3304,19 +3309,18 @@ if __name__ == "__main__":
     # Parse arguments
     args = parser.parse_args()
 
-   
-
     if args.command == "create_preset":
         view = MainApp(show_main_window=False)
         folder_list = args.folder_list
         preset_name = args.preset_name
-        view.create_preset(folder_list=folder_list, preset_name=preset_name, is_gui=False)
+        output_folder = args.output_folder
+        view.create_preset(folder_list=folder_list, preset_name=preset_name, output_folder=output_folder, is_gui=False)
         app.quit()
 
     elif args.command == "update_preset":
         view = MainApp(show_main_window=False)
         preset_path = args.preset_path
-        view.update_preset(preset_path=preset_path,is_gui=False)
+        view.update_preset(preset_path=preset_path, is_gui=False)
 
     elif args.command == "start_session_from_files":
         view = MainApp(show_main_window=False)
@@ -3332,4 +3336,3 @@ if __name__ == "__main__":
         # Default behavior: Start the GUI
         view = MainApp(show_main_window=True)
         sys.exit(app.exec_())
-
