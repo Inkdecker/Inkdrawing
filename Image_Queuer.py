@@ -576,6 +576,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
         print("cache selected_image_row", selected_image_row)
         print("cache session_selection_cache", selected_preset_row)
 
+        
 
     def create_preset(self, folder_list=None, preset_name=None, output_folder=None, is_gui=True):
         """
@@ -585,7 +586,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
         # Determine the preset name
         if not preset_name:
             preset_name = f'preset_{self.get_next_preset_number()}'
-
+        
         # Use folder_list if provided; otherwise, open the dialog
         if folder_list:
             selected_dirs = folder_list
@@ -595,13 +596,19 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
             if dialog.exec_() == QtWidgets.QDialog.Accepted:
                 selected_dirs = dialog.get_selected_folders()
                 preset_name = dialog.get_preset_name()  # Retrieve the preset name from dialog
+                
+                # Only show "No Selection" message if accepted with no selection
+                if not selected_dirs:
+                    if is_gui:
+                        self.show_info_message('No Selection', 'No folders were selected.')
+                    else:
+                        print('No folders were selected.')
+                    return
             else:
-                if is_gui:
-                    self.show_info_message('No Selection', 'No folders were selected.')
-                else:
-                    print('No folders were selected.')
+                # Dialog was canceled, just return without showing message
                 return
 
+        # Check if we have folders to process (for non-dialog case)
         if not selected_dirs:
             if is_gui:
                 self.show_info_message('No Selection', 'No folders were selected.')
@@ -625,22 +632,22 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
 
         # Validate files
         checked_files = self.check_files(all_files)
-
+        
         # Determine the output folder
         target_folder = output_folder if output_folder else self.images_presets_dir
         os.makedirs(target_folder, exist_ok=True)
-
+        
         # Write valid file paths to the preset file
         preset_filename = os.path.join(target_folder, f'{preset_name}.txt')
         with open(preset_filename, 'w', encoding='utf-8') as f:
             for file_path in sorted(checked_files['valid_files']):
                 formatted_path = os.path.normpath(file_path)  # Normalize to platform-specific path separators
                 f.write(f'{formatted_path}\n')
-
+        
         # Notify the user
         valid_count = len(checked_files["valid_files"])
         invalid_count = len(checked_files["invalid_files"])
-
+        
         if is_gui:
             if invalid_count:
                 self.show_info_message(
@@ -660,7 +667,6 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
             print(f'Preset "{preset_name}" created with {valid_count} valid file(s) and saved to {preset_filename}.')
             if invalid_count:
                 print(f'{invalid_count} invalid file(s) were not added. Supported file types: {", ".join(self.valid_extensions)}.')
-
 
     def get_next_preset_number(self):
         preset_files = [f for f in os.listdir(self.images_presets_dir) if f.startswith('preset_') and f.endswith('.txt')]
