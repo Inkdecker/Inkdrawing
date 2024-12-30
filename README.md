@@ -61,7 +61,7 @@ The image preset can be exported and used as rainmeter slideshow. To do so, sele
  
 ##### Example :
 ```batch
-Image_Queuer.exe create_preset -folder_list "D:\Desktop\Image_Folder_1" "D:\Desktop\Image_Folder_2" -preset_name "Image_preset_1" -output_folder "D:\Desktop\Output_Folder"
+session_drawing.exe create_preset -folder_list "D:\Desktop\Image_Folder_1" "D:\Desktop\Image_Folder_2" -preset_name "Image_preset_1" -output_folder "D:\Desktop\Output_Folder"
 ```
 
 ### Update preset
@@ -70,7 +70,7 @@ Image_Queuer.exe create_preset -folder_list "D:\Desktop\Image_Folder_1" "D:\Desk
   - 
 ##### Example :
 ```batch
-Image_Queuer.exe update_preset -preset_path "D:\Desktop\Image_preset_1.txt"
+session_drawing.exe update_preset -preset_path "D:\Desktop\Image_preset_1.txt"
 ```
 
 ### Start session
@@ -81,7 +81,7 @@ Image_Queuer.exe update_preset -preset_path "D:\Desktop\Image_preset_1.txt"
  
 ##### Example :
 ```batch
-Image_Queuer.exe start_session_from_files -image_preset_path "D:\Desktop\Image_preset_1.txt" -session_preset_path "D:\Desktop\Session_preset_1.txt" -randomize_settings True
+session_drawing.exe start_session_from_files -image_preset_path "D:\Desktop\Image_preset_1.txt" -session_preset_path "D:\Desktop\Session_preset_1.txt" -randomize_settings True
 ```
 
 
