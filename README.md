@@ -26,8 +26,10 @@ This is a free tool to users can use to practice drawing using references from t
  	- Image rotation 
   	- Custom shortcuts (Edit the session_settings file, duplicate shortcuts not working)
    
-   	- New: Ability to create Rainmeter profiles to export the slideshows
-
+   	- 04.12.2014 : Ability to create Rainmeter profiles to export the slideshows
+    
+   	- 30.12.2014 New: Main functions available from commande line
+	
 ##### Supported files :  .jpg, .jpeg, .png, .webp, .tiff, .jfif, .bmp
 
 
@@ -97,6 +99,7 @@ Reset timer | Ctrl + Shift + Up Arrow Key
 ### Rainmeter Slideshow: 
 Button | Hotkey
 ------------ | -------------
+Display title | Mousehover
 Previous Image | Left click
 Next Image | Right click
 Open Image File | Middle click
