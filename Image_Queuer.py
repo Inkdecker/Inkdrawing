@@ -2,7 +2,6 @@ import os
 import sys
 import subprocess
 import random
-import shelve
 
 
 from pathlib import Path
@@ -21,13 +20,13 @@ from tkinter import Tk
 from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtWidgets import QMainWindow, QApplication, QSizeGrip
 
-import json  # Add this import to use the json module
-import datetime  # Import datetime for unique timestamp
+import json  
+import datetime 
 
 from main_window import Ui_MainWindow
 from session_display import Ui_session_display
 
-import resources_config_rc  # This line should match your generated resource file name
+import resources_config_rc 
 import sip
 
 from send2trash import send2trash
@@ -140,7 +139,6 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
 
         self.init_styles()
 
-        self.presets = {}  # This should be defined or loaded as needed
 
         self.table_images_selection.setItem(0, 0, QTableWidgetItem('112'))
 
@@ -166,16 +164,15 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
         self.display = None  # Initialize with None
         # Automatically start the session if auto_start is True
         if self.auto_start_settings and (self.image_selection_cache >=0 and self.session_selection_cache >=0):
-    
+            
             self.start_session_from_files()
         # Show the main window if show_main_window is True
-        else:
+        elif show_main_window == True:
             self.show()
 
         # Initialize position for dragging
         self.oldPos = self.pos()
         self.init_styles()
-
         
         
     def init_message_boxes(self):
@@ -299,7 +296,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
 
     def init_buttons(self):
         # Buttons for selection
-        self.add_folders_button.clicked.connect(self.open_folder)
+        self.add_folders_button.clicked.connect(self.create_preset)
         self.delete_images_preset.clicked.connect(self.delete_images_files)
         
         # Buttons for preset
@@ -580,77 +577,87 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
         print("cache session_selection_cache", selected_preset_row)
 
 
-
-    def open_folder(self):
+    def create_preset(self, folder_list=None, preset_name=None, is_gui=True):
         """
-        Opens a dialog to select multiple folders, collects image file paths,
-        and stores them in a text file within the presets folder.
+        Opens a dialog to select multiple folders or processes a given list of folders.
+        For command-line usage, folder_list and preset_name are used directly, and is_gui is set to False.
         """
-        # Get the selected row
-        self.update_selection_cache()
+        # Determine the preset name
+        if not preset_name:
+            preset_name = f'preset_{self.get_next_preset_number()}'
 
-        preset_name = f'preset_{self.get_next_preset_number()}'
-        dialog = MultiFolderSelector(self, preset_name)
-
-        self.init_styles(dialog=dialog)
-
-        if dialog.exec_() == QtWidgets.QDialog.Accepted:
-            selected_dirs = dialog.get_selected_folders()
-            preset_name = dialog.get_preset_name()  # Retrieve the preset name
-
-            if not selected_dirs:
-                self.show_info_message('No Selection', 'No folders were selected.')
+        # Use folder_list if provided; otherwise, open the dialog
+        if folder_list:
+            selected_dirs = folder_list
+        else:
+            dialog = MultiFolderSelector(self, preset_name)
+            self.init_styles(dialog=dialog)
+            if dialog.exec_() == QtWidgets.QDialog.Accepted:
+                selected_dirs = dialog.get_selected_folders()
+                preset_name = dialog.get_preset_name()  # Retrieve the preset name from dialog
+            else:
+                if is_gui:
+                    self.show_info_message('No Selection', 'No folders were selected.')
+                else:
+                    print('No folders were selected.')
                 return
 
-            all_files = set()
-            # Collect image files from selected directories only (not subdirectories)
-            for directory in selected_dirs:
-                try:
-                    for file in os.listdir(directory):
-                        file_path = os.path.join(directory, file)
-                        if os.path.isfile(file_path):  # Check if it's a file
-                            all_files.add(file_path)
-                except PermissionError:
+        if not selected_dirs:
+            if is_gui:
+                self.show_info_message('No Selection', 'No folders were selected.')
+            else:
+                print('No folders were selected.')
+            return
+
+        all_files = set()
+        # Collect image files from the specified directories
+        for directory in selected_dirs:
+            try:
+                for file in os.listdir(directory):
+                    file_path = os.path.join(directory, file)
+                    if os.path.isfile(file_path):  # Check if it's a file
+                        all_files.add(file_path)
+            except PermissionError:
+                if is_gui:
                     self.show_info_message('Permission Error', f'Access denied to folder: {directory}')
+                else:
+                    print(f'Access denied to folder: {directory}')
 
-            # Check files for validity
-            checked_files = self.check_files(all_files)
+        # Validate files
+        checked_files = self.check_files(all_files)
 
-            # Determine the preset filename
-            preset_filename = os.path.join(self.images_presets_dir, f'{preset_name}.txt')
+        # Write valid file paths to the preset file
+        preset_filename = os.path.join(self.images_presets_dir, f'{preset_name}.txt')
+        with open(preset_filename, 'w', encoding='utf-8') as f:
+            for file_path in sorted(checked_files['valid_files']):
+                formatted_path = os.path.normpath(file_path)  # Normalize to platform-specific path separators
+                f.write(f'{formatted_path}\n')
 
-            # Write valid image file paths to the preset file with backslash formatting
-            with open(preset_filename, 'w', encoding='utf-8') as f:
-                for file_path in sorted(checked_files['valid_files']):
-                    formatted_path = os.path.normpath(file_path)  # Convert to backslashes
-                    f.write(f'{formatted_path}\n')
+        # Notify the user
+        valid_count = len(checked_files["valid_files"])
+        invalid_count = len(checked_files["invalid_files"])
 
-            # Provide feedback to the user
-            if checked_files['invalid_files']:
+        if is_gui:
+            if invalid_count:
                 self.show_info_message(
                     'Files Processed',
-                    f'{preset_name} : {len(checked_files["valid_files"])} file(s) added.\n'
-                    f'{len(checked_files["invalid_files"])} file(s) not added. '
+                    f'{preset_name} : {valid_count} file(s) added.\n'
+                    f'{invalid_count} file(s) not added. '
                     f'Supported file types: {", ".join(self.valid_extensions)}.'
                 )
             else:
                 self.show_info_message(
-                    'Success', f'{preset_name} : {len(checked_files["valid_files"])} file(s) saved to {preset_name}'
+                    'Success', f'{preset_name} : {valid_count} file(s) saved to {preset_name}'
                 )
+            # Reload presets
+            self.load_presets()
+        else:
+            # Print output for command-line usage
+            print(f'Preset "{preset_name}" created with {valid_count} valid file(s).')
+            if invalid_count:
+                print(f'{invalid_count} invalid file(s) were not added. Supported file types: {", ".join(self.valid_extensions)}.')
 
 
-        # Reload presets
-        self.load_presets()
-
-        # Find the row with the new preset by its name
-        rows = self.table_images_selection.rowCount()
-        for row in range(rows):
-            item = self.table_images_selection.item(row, 0)  # First column (Name)
-            if item and item.text() == preset_name:
-                self.table_images_selection.selectRow(row)
-                break
-
-        QTest.qWait(1000)
 
     def get_next_preset_number(self):
         preset_files = [f for f in os.listdir(self.images_presets_dir) if f.startswith('preset_') and f.endswith('.txt')]
@@ -831,50 +838,52 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
 
 
 
-    def update_preset(self):
+    def update_preset(self, preset_path=None, is_gui=True):
         """
-        Update the selected preset by refreshing its filepaths.
-
-        Steps:
-        1. Retrieve the filepaths stored in the selected preset.
-        2. Keep only unique directories without filenames.
-        3. Search for image files in those directories.
-        4. Save the updated file list to the preset file.
+        Updates the selected preset or a specified preset path.
+        For command-line usage, preset_path is used directly, and is_gui is set to False.
         """
-        # Get the selected row
-        selected_row = self.table_images_selection.currentRow()
-
-        # Check if a row is actually selected
-        if selected_row == -1:
-            self.show_info_message('Warning', 'No preset selected for update.')
-            return
-
-        # Get the file name from the first column of the selected row
-        file_item = self.table_images_selection.item(selected_row, 0)
-        if not file_item:
-            self.show_info_message('Warning', 'No file associated with the selected preset.')
-            return
-
-        # Construct the full file name and path
-        preset_name = file_item.text()
-        preset_file_path = os.path.join(self.images_presets_dir, f"{preset_name}.txt")
+        # Use the provided preset_path or select one from the UI
+        if preset_path:
+            preset_file_path = preset_path
+        else:
+            selected_row = self.table_images_selection.currentRow()
+            if selected_row == -1:
+                if is_gui:
+                    self.show_info_message('Warning', 'No preset selected for update.')
+                else:
+                    print('Warning: No preset selected for update.')
+                return
+            file_item = self.table_images_selection.item(selected_row, 0)
+            if not file_item:
+                if is_gui:
+                    self.show_info_message('Warning', 'No file associated with the selected preset.')
+                else:
+                    print('Warning: No file associated with the selected preset.')
+                return
+            preset_name = file_item.text()
+            preset_file_path = os.path.join(self.images_presets_dir, f"{preset_name}.txt")
 
         if not os.path.exists(preset_file_path):
-            self.show_info_message('Error', f'Preset file "{preset_name}.txt" does not exist.')
+            if is_gui:
+                self.show_info_message('Error', f'Preset file "{preset_file_path}" does not exist.')
+            else:
+                print(f'Error: Preset file "{preset_file_path}" does not exist.')
             return
 
-        # Step 1: Retrieve filepaths stored in the preset
+        # Read existing file paths
         try:
             with open(preset_file_path, 'r', encoding='utf-8') as f:
                 filepaths = [line.strip() for line in f if line.strip()]
         except Exception as e:
-            self.show_info_message('Error', f"Failed to read preset file. Error: {str(e)}")
+            if is_gui:
+                self.show_info_message('Error', f"Failed to read preset file. Error: {str(e)}")
+            else:
+                print(f'Error: Failed to read preset file. Error: {str(e)}')
             return
 
-        # Step 2: Extract unique directories
+        # Collect image files from unique directories
         unique_directories = {os.path.dirname(path) for path in filepaths if os.path.exists(os.path.dirname(path))}
-
-        # Step 3: Search for image files in those directories
         updated_filepaths = set()
         for directory in unique_directories:
             try:
@@ -883,20 +892,31 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
                     if os.path.isfile(file_path) and os.path.splitext(file_path)[1].lower() in self.valid_extensions:
                         updated_filepaths.add(file_path)
             except PermissionError:
-                print(f"Permission denied for directory: {directory}")
+                if is_gui:
+                    self.show_info_message('Permission Error', f'Access denied to folder: {directory}')
+                else:
+                    print(f'Permission Error: Access denied to folder: {directory}')
 
-        # Step 4: Save updated filepaths back to the preset
+        # Write updated file paths back to the preset
         try:
             with open(preset_file_path, 'w', encoding='utf-8') as f:
                 for path in sorted(updated_filepaths):
                     f.write(path + '\n')
 
-            self.show_info_message('Success', f'Preset "{preset_name}" updated with {len(updated_filepaths)} images.')
+            if is_gui:
+                self.show_info_message('Success', f'Preset "{os.path.basename(preset_file_path)}" updated with {len(updated_filepaths)} images.')
+            else:
+                print(f'Preset "{os.path.basename(preset_file_path)}" updated with {len(updated_filepaths)} images.')
         except Exception as e:
-            self.show_info_message('Error', f"Failed to update preset file. Error: {str(e)}")
+            if is_gui:
+                self.show_info_message('Error', f"Failed to update preset file. Error: {str(e)}")
+            else:
+                print(f'Error: Failed to update preset file. Error: {str(e)}')
 
-        # Reload presets to reflect changes
-        self.load_presets()
+        # Reload presets
+        if is_gui:
+            self.load_presets()
+
 
 
     def create_rainmeter_preset(self):
@@ -963,6 +983,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
 
                 # Replace placeholders in the INI file
                 selected_preset_path = os.path.join(self.images_presets_dir, f"{preset_name}.txt")
+                ini_content = ini_content.replace(r'Title = Title', r'Title =' + preset_name)
                 ini_content = ini_content.replace(r'ImagePreset = ImagePreset', r'ImagePreset=' + selected_preset_path)
                 ini_content = ini_content.replace(r'DeletedFilesFolder = DeletedFilesFolder', r'DeletedFilesFolder=' + self.rainmeter_deleted_files_dir + '\\')
                 ini_content = ini_content.replace(r'MouseScrollDownAction = MouseScrollDownAction', r'MouseScrollDownAction =' + f' [!DeactivateConfig "{preset_name}"]')
@@ -1034,7 +1055,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
 
             row = item.row()
             if row >= len(cache) or row < 0:
-                print(f"Invalid row: {row}")
+                #print(f"Invalid row: {row}")
                 return
 
             # Original and new filenames
@@ -1237,10 +1258,11 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
 
 
  
-    def start_session_from_files(self):
+    def start_session_from_files(self, image_preset_path=None, session_preset_path=None, randomize_settings=True):
         """
-        Creates and runs SessionDisplay using information from the files of the selected rows.
+        Starts a session using specified presets or selected files.
         """
+        # Load image preset
 
         # Helper function to convert time string to seconds
         def convert_time_to_seconds(time_str):
@@ -1252,91 +1274,61 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
                 seconds = int(time_str.split('s')[0])
             return minutes * 60 + seconds
 
-        # Initialize session data
-        session_details = {}
 
-        # Get the selected image and session preset file
-        selected_image_row = self.table_images_selection.currentRow()
-        selected_session_row = self.table_session_selection.currentRow()
-  
-                # Validate the loaded data
-        if  selected_session_row == -1 or  selected_image_row == -1:
-            print("No valid images or session details found.")
-            self.show()
-            print("Settings window opened")
-            return
+        if image_preset_path:
+            selected_images = self.remove_missing_files(image_preset_path)
+        else:
+            selected_row = self.table_images_selection.currentRow()
+            if selected_row == -1:
+                self.show_info_message('Error', 'No image preset selected.')
+                return
+            file_item = self.table_images_selection.item(selected_row, 0)
+            image_preset_path = os.path.join(self.images_presets_dir, f"{file_item.text()}.txt")
+            selected_images = self.remove_missing_files(image_preset_path)
 
+        # Load session preset
+        if session_preset_path:
+            try:
+                with open(session_preset_path, 'r') as f:
+                    session_details = json.load(f)
+            except (FileNotFoundError, json.JSONDecodeError) as e:
+                self.show_info_message('Error', f"Error reading session preset: {str(e)}")
+                return
+        else:
+            selected_row = self.table_session_selection.currentRow()
+            if selected_row == -1:
+                self.show_info_message('Error', 'No session preset selected.')
+                return
+            file_item = self.table_session_selection.item(selected_row, 0)
+            session_preset_path = os.path.join(self.session_presets_dir, f"{file_item.text()}.txt")
+            try:
+                with open(session_preset_path, 'r') as f:
+                    session_details = json.load(f)
+            except (FileNotFoundError, json.JSONDecodeError):
+                self.show_info_message('Error', f"Error reading session preset: {session_preset_path}")
+                return
 
-        if selected_image_row != -1:
-            # Fetch the image preset filename
-            image_file_item = self.table_images_selection.item(selected_image_row, 0)
-            if image_file_item:
-                image_filename = image_file_item.text() + ".txt"
-                image_file_path = os.path.join(self.images_presets_dir, image_filename)
-
-
-                selected_images = self.remove_missing_files(image_file_path)
-
-                if not selected_images:
-                    print("No valid images found after removing missing files.")
-                    self.show()
-                    print("Settings window opened")
-                    return
-        if selected_session_row != -1:
-            # Fetch the session preset filename
-            session_file_item = self.table_session_selection.item(selected_session_row, 0)
-            if session_file_item:
-                session_filename = session_file_item.text() + ".txt"
-                session_file_path = os.path.join(self.session_presets_dir, session_filename)
-
-                # Read session details from the session preset file
-                try:
-                    with open(session_file_path, 'r') as f:
-                        session_details = json.load(f)
-                        print(f"Loaded session details from {session_filename}: {session_details}")
-                except (FileNotFoundError, json.JSONDecodeError):
-                    print(f"Error reading session file: {session_filename}")
-                    return
-
-
-
-        # Shuffle images if randomize_settings is True
-        if self.randomize_settings:
+        # Randomize images if applicable
+        if randomize_settings:
             random.shuffle(selected_images)
-            print("Images have been shuffled randomly.")
 
-        # Convert the session time to seconds
+        # Get session details
         session_time = convert_time_to_seconds(session_details.get('time', '0m 0s'))
-
-        # Use the total_images value from the session details
         total_images_to_display = session_details.get('total_images', len(selected_images))
 
-        # Check if there are enough images to display
-        if total_images_to_display > len(selected_images):
-            print(f"Warning: Not enough images to display. Requested {total_images_to_display}, but only {len(selected_images)} available.")
-            total_images_to_display = len(selected_images)
-
-        # Select only the number of images specified by total_images
+        # Limit the number of images to display
         selected_images = selected_images[:total_images_to_display]
 
-        # Prepare session schedule and total images
+        # Initialize and display the session
         self.session_schedule = {
-            0: [
-                session_details.get('session_name', 'Session'),
-                total_images_to_display,
-                session_time
-            ]
+            0: [session_details.get('session_name', 'Session'), total_images_to_display, session_time]
         }
         self.total_scheduled_images = total_images_to_display
 
         if self.display is not None:
-            print("Closing the existing SessionDisplay instance.")
-            self.display.close()  # Close the existing window
-            self.display = None   # Reset the reference
+            self.display.close()
+            self.display = None
 
-
-
-        # Initialize and run SessionDisplay
         self.display = SessionDisplay(
             shortcuts=self.shortcut_settings,
             schedule=self.session_schedule,
@@ -1347,7 +1339,6 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
 
         self.display.load_entry()
         self.display.show()
-
         self.save_session_settings()
 
 
@@ -3284,12 +3275,61 @@ class ThemeSelectorDialog(QtWidgets.QDialog):
 
 if __name__ == "__main__":
     import sys
-    show_main_window = True  # Set to True to show the main window
+    import argparse
+    import json
+    import random
+    from PyQt5 import QtWidgets
+
     app = QtWidgets.QApplication(sys.argv)
-    view = MainApp(show_main_window=show_main_window)
-    sys.exit(app.exec_())
+    parser = argparse.ArgumentParser(description="Image Session Tool")
+    subparsers = parser.add_subparsers(dest="command")
+
+    # Subparser for "create_preset"
+    create_preset_parser = subparsers.add_parser("create_preset", help="Open a folder and process its contents")
+    create_preset_parser.add_argument("-folder_list", required=True, nargs="+", help="List of folder paths to use instead of dialog")
+    create_preset_parser.add_argument("-preset_name", default="preset_output", help="Name of the preset to use instead of dialog")
 
 
+    # Subparser for "update_preset"
+    update_preset_parser = subparsers.add_parser("update_preset", help="Update a preset with refreshed file paths")
+    update_preset_parser.add_argument("-preset_path", required=True, help="Path of the preset to update")
 
+    # Subparser for "start_session_from_files"
+    start_session_parser = subparsers.add_parser("start_session_from_files", help="Start session from files")
+    start_session_parser.add_argument("-image_preset_path", help="Path to the image preset file")
+    start_session_parser.add_argument("-session_preset_path", help="Path to the session preset file")
+    start_session_parser.add_argument("-randomize_settings", type=lambda x: x.lower() == "true", default=True,
+                                       help="Randomize settings (True/False)")
 
-    
+    # Parse arguments
+    args = parser.parse_args()
+
+   
+
+    if args.command == "create_preset":
+        view = MainApp(show_main_window=False)
+        folder_list = args.folder_list
+        preset_name = args.preset_name
+        view.create_preset(folder_list=folder_list, preset_name=preset_name, is_gui=False)
+        app.quit()
+
+    elif args.command == "update_preset":
+        view = MainApp(show_main_window=False)
+        preset_path = args.preset_path
+        view.update_preset(preset_path=preset_path,is_gui=False)
+
+    elif args.command == "start_session_from_files":
+        view = MainApp(show_main_window=False)
+        image_preset_path = args.image_preset_path
+        session_preset_path = args.session_preset_path
+        randomize_settings = args.randomize_settings
+        view.start_session_from_files(image_preset_path=image_preset_path,
+                                      session_preset_path=session_preset_path,
+                                      randomize_settings=randomize_settings)
+        sys.exit(app.exec_())
+
+    else:
+        # Default behavior: Start the GUI
+        view = MainApp(show_main_window=True)
+        sys.exit(app.exec_())
+

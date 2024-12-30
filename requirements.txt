@@ -2,3 +2,4 @@ opencv-python
 pygame
 PyQt5
 send2trash
+numpy
