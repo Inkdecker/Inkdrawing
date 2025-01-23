@@ -1,5 +1,6 @@
 function Initialize()
     file_path = SKIN:GetVariable('ImagePreset')
+    closeThreshold = tonumber(SKIN:GetVariable('CloseThreshold')) or 1
     imgTable = {}
     for line in io.lines(SKIN:MakePathAbsolute(file_path)) do
         table.insert(imgTable, line)
@@ -22,6 +23,40 @@ function Initialize()
     currentQuoteIndex = indexList[currentIndex]
 
 end
+
+
+-- Global variable to track the last time CopyFilePath was called
+lastCopyTime = 0
+
+function CopyFilePath()
+    -- Get the current file path
+    local filePath = imgTable[currentQuoteIndex]
+
+    -- Copy the file path to the clipboard
+    SKIN:Bang('!SetClip', filePath)
+
+    -- Update the last copy time
+    lastCopyTime = os.clock()
+
+
+end
+
+function CloseSlideshow()
+    -- Get the current time
+    local currentTime = os.clock()
+
+    -- Check if at least 1 second has passed since CopyFilePath was called
+    if currentTime - lastCopyTime >= closeThreshold then
+        -- Close the slideshow
+        SKIN:Bang('!DeactivateConfig')
+    else
+        -- Log a message or notify the user that closing is not allowed yet
+        SKIN:Bang('!Log', 'Cannot close the slideshow: CopyFilePath was used less than ' .. closeThreshold .. ' seconds ago.', 'Warning')
+    end
+end
+
+
+
 
 function Update()
     currentIndex = currentIndex + 1

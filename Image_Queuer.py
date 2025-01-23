@@ -583,6 +583,8 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
         Opens a dialog to select multiple folders or processes a given list of folders.
         For command-line usage, folder_list and preset_name are used directly, and is_gui is set to False.
         """
+        self.load_presets()
+        
         # Determine the preset name
         if not preset_name:
             preset_name = f'preset_{self.get_next_preset_number()}'
@@ -995,7 +997,6 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
                 ini_content = ini_content.replace(r'Title = Title', r'Title =' + preset_name)
                 ini_content = ini_content.replace(r'ImagePreset = ImagePreset', r'ImagePreset=' + selected_preset_path)
                 ini_content = ini_content.replace(r'DeletedFilesFolder = DeletedFilesFolder', r'DeletedFilesFolder=' + self.rainmeter_deleted_files_dir + '\\')
-                ini_content = ini_content.replace(r'MouseScrollDownAction = MouseScrollDownAction', r'MouseScrollDownAction =' + f' [!DeactivateConfig "{preset_name}"]')
 
                 # Write the modified content to the destination INI file
                 with open(ini_file_destination, "w") as ini_file:
@@ -2743,7 +2744,6 @@ class SessionDisplay(QWidget, Ui_session_display):
         self.grayscale_button.setChecked(False)
         self.flip_horizontal_button.setChecked(False)
         self.flip_vertical_button.setChecked(False)
-        self.lock_scale_button.setChecked(False)
         self.grid_displayed = False
         self.grid_overlay.hide()
         self.grid_button.setChecked(False)
