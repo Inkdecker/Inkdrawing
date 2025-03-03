@@ -1,7 +1,7 @@
 {
-    "selected_image_row": 6,
+    "selected_image_row": 0,
     "selected_session_row": 0,
-    "randomize_settings": false,
+    "randomize_settings": true,
     "auto_start_settings": false,
     "theme_settings": "default_theme.txt",
     "shortcuts": {

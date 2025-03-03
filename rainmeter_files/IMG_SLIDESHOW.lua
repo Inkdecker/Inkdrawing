@@ -21,25 +21,34 @@ function Initialize()
 
     currentIndex = 1
     currentQuoteIndex = indexList[currentIndex]
-
 end
 
-
--- Global variable to track the last time CopyFilePath was called
+-- Global variables to track the last time functions were called
 lastCopyTime = 0
+lastOpenFolderTime = 0
 
 function CopyFilePath()
-    -- Get the current file path
-    local filePath = imgTable[currentQuoteIndex]
 
-    -- Copy the file path to the clipboard
-    SKIN:Bang('!SetClip', filePath)
+    -- Get the current time
+    local currentTime = os.clock()
 
-    -- Update the last copy time
-    lastCopyTime = os.clock()
+    -- Check if at least 1 second has passed since CopyFilePath was called
+    if currentTime - lastCopyTime >= closeThreshold then
+        -- Get the current file path
+        local filePath = imgTable[currentQuoteIndex]
 
+        -- Copy the file path to the clipboard
+        SKIN:Bang('!SetClip', filePath)
 
+        -- Update the last copy time
+        lastCopyTime = os.clock()
+    else
+        -- Log a message or notify the user that closing is not allowed yet
+        SKIN:Bang('!Log', 'Image path copied less than ' .. closeThreshold .. ' seconds ago.', 'Warning')
+    end
 end
+
+
 
 function CloseSlideshow()
     -- Get the current time
@@ -54,9 +63,6 @@ function CloseSlideshow()
         SKIN:Bang('!Log', 'Cannot close the slideshow: CopyFilePath was used less than ' .. closeThreshold .. ' seconds ago.', 'Warning')
     end
 end
-
-
-
 
 function Update()
     currentIndex = currentIndex + 1
@@ -87,11 +93,7 @@ function NextQuote()
     return imgTable[currentQuoteIndex]
 end
 
-
-
-
 function Delete_File()
-
     local filePath = imgTable[currentQuoteIndex]  
     -- Define the destination folder path
     local tmpFolderPath = SKIN:GetVariable('DeletedFilesFolder') 
@@ -102,9 +104,7 @@ function Delete_File()
     -- Rename the file to swap folders
     local success, err = os.rename(filePath, new_filePath)
 
-
     -- Remove the entry from imgTable
-
     table.remove(imgTable, currentQuoteIndex)
 
     -- Update the text file with the modified content
@@ -122,10 +122,21 @@ function Delete_File()
     file:close()
 end
 
-
 function OpenFolder()
-    local filePath = imgTable[currentQuoteIndex]
+    -- Get the current time
+    local currentTime = os.clock()
     
-    -- Use explorer command to open the folder and select the current image
-    os.execute('explorer /select,"' .. filePath .. '"')
+    -- Check if at least 1 second has passed since last OpenFolder call
+    if currentTime - lastOpenFolderTime >= closeThreshold then
+        local filePath = imgTable[currentQuoteIndex]
+        
+        -- Use explorer command to open the folder and select the current image
+        os.execute('explorer /select,"' .. filePath .. '"')
+        
+        -- Update the last open folder time
+        lastOpenFolderTime = currentTime
+    else
+        -- Log a warning message
+        SKIN:Bang('!Log', 'Cannot open folder: OpenFolder was used less than ' .. closeThreshold .. 'second ago.', 'Warning')
+    end
 end
