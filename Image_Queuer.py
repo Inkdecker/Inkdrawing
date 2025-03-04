@@ -142,6 +142,17 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
 
         self.table_images_selection.setItem(0, 0, QTableWidgetItem('112'))
 
+        # Enable sorting on table headers
+        self.table_images_selection.setSortingEnabled(True)
+        self.table_session_selection.setSortingEnabled(True)
+
+
+        # Alternative method (ensures interactivity)
+        self.table_images_selection.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Interactive)
+        self.table_session_selection.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Interactive)
+
+
+
 
         self.load_presets()
 
@@ -547,12 +558,12 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
         # Prevent column resizing for table_imagess_selection
         header_images = self.table_images_selection.horizontalHeader()
         header_images.setSectionResizeMode(QHeaderView.Fixed)
-        header_images.setSectionsClickable(False)  # Make header non-clickable
+        header_images.setSectionsClickable(True)  # Make header non-clickable
 
         # Prevent column resizing for table_session_selection
         header_session = self.table_session_selection.horizontalHeader()
         header_session.setSectionResizeMode(QHeaderView.Fixed)
-        header_session.setSectionsClickable(False)  # Make header non-clickable
+        header_session.setSectionsClickable(True)  # Make header non-clickable
 
         # Ensure the selection behavior is correctly set after applying styles
         self.table_session_selection.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)

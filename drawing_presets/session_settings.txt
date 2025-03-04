@@ -1,6 +1,6 @@
 {
     "selected_image_row": 0,
-    "selected_session_row": 0,
+    "selected_session_row": 2,
     "randomize_settings": true,
     "auto_start_settings": false,
     "theme_settings": "default_theme.txt",
