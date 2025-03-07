@@ -795,8 +795,6 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
         selected_row = self.table_images_selection.currentRow()
         self.update_selection_cache()
 
-  
-
         # Check if a row is actually selected
         if selected_row == -1:
             print('Warning', 'No preset selected for deletion.')
@@ -811,17 +809,16 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
         file_name = file_item.text() + ".txt"
         file_path = os.path.join(self.images_presets_dir, file_name)
 
-        # Delete the file if it exists
+        # Send the file to the recycle bin if it exists
         if os.path.exists(file_path):
             try:
-                os.remove(file_path)
-                # self.show_info_message( 'Success', f'Preset "{file_name}" deleted successfully.')
+                send2trash(file_path)  # Send file to the recycle bin
+                # self.show_info_message('Success', f'Preset "{file_name}" deleted successfully.')
             except Exception as e:
                 self.show_info_message('Error', f'Failed to delete preset. Error: {str(e)}')
                 return
         else:
             self.show_info_message('Warning', f'File "{file_name}" does not exist.')
-
 
         # Reload the presets
         self.load_presets(use_cache=False)
@@ -1025,9 +1022,8 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
 
 
     def delete_presets_files(self):
-        """Deletes the selected preset file and updates the preset table."""
+        """Deletes the selected preset file by sending it to the Recycle Bin and updates the preset table."""
         # Get the selected row
-
         selected_row = self.table_session_selection.currentRow()
         self.update_selection_cache()
 
@@ -1045,20 +1041,20 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
         file_name = file_item.text() + ".txt"
         file_path = os.path.join(self.session_presets_dir, file_name)
         
-        # Delete the file if it exists
+        # Move the file to the Recycle Bin if it exists
         if os.path.exists(file_path):
             try:
-                os.remove(file_path)
-                #self.show_info_message( 'Success', f'Preset "{file_name}" deleted successfully.')
+                send2trash(file_path)
+                # self.show_info_message('Success', f'Preset "{file_name}" sent to Recycle Bin.')
             except Exception as e:
-                self.show_info_message('Error', f'Failed to delete preset. Error: {str(e)}')
+                self.show_info_message('Error', f'Failed to send preset to Recycle Bin. Error: {str(e)}')
                 return
         else:
             self.show_info_message('Warning', f'File "{file_name}" does not exist.')
 
-
         # Reload the presets
         self.load_presets(use_cache=False)
+
 
 
     def rename_presets(self, item):
@@ -1121,6 +1117,11 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
         # Clear the tables and caches
         self.table_images_selection.setRowCount(0)
         self.table_session_selection.setRowCount(0)
+        
+        # Sort the tables by the first column (preset names) A to Z
+        self.table_images_selection.sortItems(0, QtCore.Qt.AscendingOrder)
+        self.table_session_selection.sortItems(0, QtCore.Qt.AscendingOrder)
+
 
 
         # Load image presets
@@ -1717,10 +1718,12 @@ class SessionDisplay(QWidget, Ui_session_display):
 
 
     def show_main_window(self):
-        view.show()              # Show the main window
-        view.init_styles()  # Initialize window style 
-        view.raise_()            # Bring the window to the front
-        view.activateWindow()    # Focus on the window
+        if view.isMinimized():  # Check if the window is minimized
+            view.showNormal()  # Restore the window if minimized
+        view.show()  # Show the main window
+        view.init_styles()  # Initialize window style           
+        view.raise_()  # Bring the window to the front
+        view.activateWindow()  # Focus on the window
 
     def init_sizing(self):
         """
