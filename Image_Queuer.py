@@ -343,6 +343,8 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
         self.theme_options_button.clicked.connect(self.open_theme_selector)
 
 
+        # Preset search
+        self.search_preset.textChanged.connect(self.filter_presets)
 
 
     def init_styles(self, dialog=None, dialog_grid=None, session=None):
@@ -587,7 +589,20 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
         print("cache selected_image_row", selected_image_row)
         print("cache session_selection_cache", selected_preset_row)
 
+
+
+    def filter_presets(self):
+        """Filter table_images_selection based on search_preset input."""
+        search_text = self.search_preset.text().strip().lower()
         
+        for row in range(self.table_images_selection.rowCount()):
+            item = self.table_images_selection.item(row, 0)  # Assuming filenames are in column 0
+            if item:
+                filename = item.text().lower()
+                self.table_images_selection.setRowHidden(row, search_text not in filename)
+
+
+
 
     def create_preset(self, folder_list=None, preset_name=None, output_folder=None, is_gui=True):
         """
