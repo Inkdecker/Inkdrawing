@@ -26,10 +26,11 @@ This is a free tool to users can use to practice drawing using references from t
  	- Image rotation 
   	- Custom shortcuts (Edit the session_settings file, duplicate shortcuts not working)
    
-   	- 04.12.2014 : Ability to create Rainmeter profiles to export the slideshows
+   	- 04.12.2024: Ability to create Rainmeter profiles to export the slideshows
+   	- 30.12.2024: Main functions available from commande line
     
-   	- (New) 30.12.2014: Main functions available from commande line
-	
+      	- (New) 28.03.2025 New: Search function for the image presets.
+       
 ##### Supported files :  .jpg, .jpeg, .png, .webp, .tiff, .jfif, .bmp
 
 
