@@ -42,6 +42,13 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
 
         self.valid_extensions = {'.jpg', '.jpeg', '.png', '.webp', '.tiff','.jfif', '.bmp'}
 
+        # Install event filter
+        self.installEventFilter(self)
+        
+        # Disable tab focus for all widgets
+        for widget in self.findChildren(QtWidgets.QWidget):
+            widget.setFocusPolicy(QtCore.Qt.ClickFocus)
+
 
         # Define default shortcuts
         self.default_shortcuts = {
@@ -603,6 +610,35 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
 
 
 
+    def keyPressEvent(self, event):
+        if event.key() == QtCore.Qt.Key_Tab:
+            # Custom Tab key handling
+            if self.search_preset.hasFocus():
+                # Clear focus from all widgets
+                focused_widget = QtWidgets.QApplication.focusWidget()
+                if focused_widget:
+                    focused_widget.clearFocus()
+                
+                # Explicitly clear focus for the entire window
+                self.clearFocus()
+            else:
+                # Set focus to search_preset
+                self.search_preset.setFocus()
+                self.search_preset.selectAll()
+            
+            # Prevent default Tab behavior
+            event.accept()
+            return
+        
+        # Call the parent class's keyPressEvent for other key events
+        super().keyPressEvent(event)
+
+    def eventFilter(self, obj, event):
+        # Optionally keep your existing event filter logic
+        return super().eventFilter(obj, event)
+
+
+######### PRESET SECTION ######### 
 
     def create_preset(self, folder_list=None, preset_name=None, output_folder=None, is_gui=True):
         """

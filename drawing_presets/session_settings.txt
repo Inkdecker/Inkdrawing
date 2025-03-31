@@ -1,5 +1,5 @@
 {
-    "selected_image_row": 1,
+    "selected_image_row": 5,
     "selected_session_row": 1,
     "randomize_settings": true,
     "auto_start_settings": false,
