@@ -22,15 +22,15 @@ This is a free tool to users can use to practice drawing using references from t
 	- Open current image folder
 	- Images cache and large image downscaling
 	- Dark / Light themes + Custom themes compatibility
- 	- File deletion (Deleted files are send to Recycle Bin)
- 	- Image rotation 
-  	- Custom shortcuts (Edit the session_settings file, duplicate shortcuts not working)
-   
-   	- 04.12.2024: Ability to create Rainmeter profiles to export the slideshows
-   	- 30.12.2024: Main functions available from commande line
-      	- 28.03.2025: Search function for the image presets.
-       
-        - (New) 07.04.2025 New: Added color labels to the image preset table.
+	- File deletion (Deleted files are send to Recycle Bin)
+	- Image rotation 
+	- Custom shortcuts (Edit the session_settings file, duplicate shortcuts not working)
+	   
+	- 04.12.2024: Ability to create Rainmeter profiles to export the slideshows.
+	- 30.12.2024: Main functions available from commande line.
+	- 28.03.2025: Search function for the image presets.
+	
+	- (New) 07.04.2025: Added color labels to the image preset table.
 	
 ##### Supported files :  .jpg, .jpeg, .png, .webp, .tiff, .jfif, .bmp
 
