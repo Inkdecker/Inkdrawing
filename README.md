@@ -28,9 +28,10 @@ This is a free tool to users can use to practice drawing using references from t
    
    	- 04.12.2024: Ability to create Rainmeter profiles to export the slideshows
    	- 30.12.2024: Main functions available from commande line
-    
-      	- (New) 28.03.2025 New: Search function for the image presets.
+      	- 28.03.2025: Search function for the image presets.
        
+        - (New) 07.04.2025 New: Added color labels to the image preset table.
+	
 ##### Supported files :  .jpg, .jpeg, .png, .webp, .tiff, .jfif, .bmp
 
 
@@ -102,7 +103,7 @@ Button | Hotkey
 ------------ | -------------
 Start session | S
 Close Window | Escape
-
+Cycle Labels | ²
 ### Session Window: 
 Button | Hotkey
 ------------ | -------------
