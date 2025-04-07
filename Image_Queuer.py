@@ -1,35 +1,36 @@
+# OS 
 import os
 import sys
 import subprocess
 import random
+import shutil
+import json  
+import datetime 
 
-
+from send2trash import send2trash
 from pathlib import Path
+
+# Image stuff
 import cv2
 import numpy as np
 from pygame import mixer
 
+
+
+# PyQT 
+from PyQt5 import QtCore, QtWidgets
+from PyQt5.QtCore import Qt, QEvent, QItemSelectionModel
 from PyQt5 import QtGui
+from PyQt5.QtGui import QColor
 from PyQt5.QtTest import QTest
 from PyQt5.QtWidgets import *
-from PyQt5.QtCore import Qt
-import shutil
-
-from tkinter import filedialog
-from tkinter import Tk
-from PyQt5 import QtCore, QtWidgets
-from PyQt5.QtWidgets import QMainWindow, QApplication, QSizeGrip
-
-import json  
-import datetime 
-
-from main_window import Ui_MainWindow
-from session_display import Ui_session_display
-
-import resources_config_rc 
 import sip
 
-from send2trash import send2trash
+# App 
+from main_window import Ui_MainWindow
+from session_display import Ui_session_display
+import resources_config_rc 
+
 
 
 
@@ -50,11 +51,17 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
             widget.setFocusPolicy(QtCore.Qt.ClickFocus)
 
 
+        # Initialize label dictionaries
+        self.labels_color_dictionary = {"Default": "#00000000"}
+        self.preset_labels_dictionary = {}
+
+
         # Define default shortcuts
         self.default_shortcuts = {
             "main_window": {
                 "start": "S", 
-                "close": "Escape"
+                "close": "Escape",
+                "cycle_label": "\u00b2"
             },
             "session_window": {
                 "toggle_resize": "R",
@@ -88,7 +95,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
 
 
 
-        # Use the executable's directory for absolute paths
+        # Use the executable's directory for absolute paths 
         if getattr(sys, 'frozen', False):  # Check if the application is frozen (compiled as an EXE)
             self.base_dir = os.path.dirname(sys.executable)
             self.temp_dir = sys._MEIPASS
@@ -140,13 +147,6 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
         self.session_names_cache = []
 
 
-        self.image_selection_cache = -1
-        self.session_selection_cache = -1
-
-
-        self.init_styles()
-
-
         self.table_images_selection.setItem(0, 0, QTableWidgetItem('112'))
 
         # Enable sorting on table headers
@@ -161,7 +161,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
 
 
 
-        self.load_presets()
+        
 
         self.schedule = []
         self.total_time = 0
@@ -174,6 +174,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
         self.init_buttons()
         self.apply_shortcuts_main_window()
 
+        
 
         # Hide the main window initially
         #self.setWindowFlags(QtCore.Qt.Window | QtCore.Qt.FramelessWindowHint)
@@ -181,9 +182,9 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
 
         self.display = None  # Initialize with None
         # Automatically start the session if auto_start is True
-        if self.auto_start_settings and (self.image_selection_cache >=0 and self.session_selection_cache >=0):
-            
+        if self.auto_start_settings:
             self.start_session_from_files()
+
         # Show the main window if show_main_window is True
         elif show_main_window == True:
             self.show()
@@ -191,6 +192,8 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
         # Initialize position for dragging
         self.oldPos = self.pos()
         self.init_styles()
+        self.load_presets()
+
         
         
     def init_message_boxes(self):
@@ -330,7 +333,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
         self.rainmeter_preset_button.clicked.connect(self.create_rainmeter_preset) 
 
         # Start session button with tooltip
-        self.start_session_button.clicked.connect(self.start_session_from_files)
+        self.start_session_button.clicked.connect(self.start_session_launcher)
         self.start_session_button.setToolTip(f"[{self.shortcut_settings['main_window']['start']}] Start the session.")
 
         # Close window button with tooltip
@@ -343,8 +346,25 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
         self.auto_start_toggle.stateChanged.connect(self.update_auto_start_settings)
 
         # Table selection handlers
-        self.table_images_selection.itemChanged.connect(self.rename_presets)
-        self.table_session_selection.itemChanged.connect(self.rename_presets)
+        #self.table_images_selection.itemChanged.connect(self.rename_presets)
+        #self.table_session_selection.itemChanged.connect(self.rename_presets)
+
+        self.table_images_selection.itemSelectionChanged.connect(self.update_selection_cache)
+        self.table_session_selection.itemSelectionChanged.connect(self.update_selection_cache)
+
+
+        self.table_images_selection.itemChanged.connect(self.handle_preset_rename)
+        self.table_session_selection.itemChanged.connect(self.handle_preset_rename)
+
+        # Track editing state to prevent duplicate signals
+        self.currently_editing = False
+        self.current_edited_item = None
+
+        # Connect itemDoubleClicked to start tracking edits
+        self.table_images_selection.itemDoubleClicked.connect(self.start_edit_tracking)
+        self.table_session_selection.itemDoubleClicked.connect(self.start_edit_tracking)
+        
+
 
         # Theme selector button
         self.theme_options_button.clicked.connect(self.open_theme_selector)
@@ -352,6 +372,114 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
 
         # Preset search
         self.search_preset.textChanged.connect(self.filter_presets)
+
+        # Connect label options button
+        self.labels_options_button.clicked.connect(self.open_label_manager)
+
+
+
+        # Add context menu to table_images_selection
+        self.table_images_selection.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.table_images_selection.customContextMenuRequested.connect(self.show_image_context_menu)
+
+
+
+
+
+    def show_image_context_menu(self, position):
+        """Show context menu for the image table with direct label assignment options."""
+        selected_row = self.table_images_selection.currentRow()
+        if selected_row < 0:
+            return
+            
+        file_item = self.table_images_selection.item(selected_row, 1)  # Name column
+        if not file_item:
+            return
+            
+        filename = file_item.text() + ".txt"
+        
+        context_menu = QMenu(self)
+        
+        # Add label options directly to the context menu
+        for label_name, color in sorted(self.labels_color_dictionary.items()):
+            action = context_menu.addAction(label_name)
+            pixmap = QtGui.QPixmap(16, 16)
+            pixmap.fill(QColor(color))
+            action.setIcon(QtGui.QIcon(pixmap))
+            
+            # Check the current label
+            current_label = self.preset_labels_dictionary.get(filename, "Default")
+            if label_name == current_label:
+                action.setCheckable(True)
+                action.setChecked(True)
+                
+            # Connect the action
+            action.triggered.connect(lambda checked, ln=label_name: self.assign_label(filename, ln))
+            
+        # Show the menu
+        context_menu.exec_(self.table_images_selection.viewport().mapToGlobal(position))
+
+
+    def assign_label(self, filename, label_name):
+        """Assign a label to a preset file."""
+        self.preset_labels_dictionary[filename] = label_name
+        self.save_session_settings()
+        
+        # Update the UI
+        selected_row = self.table_images_selection.currentRow()
+        if selected_row >= 0:
+            color_item = self.table_images_selection.item(selected_row, 0)
+            if color_item:
+                color = self.labels_color_dictionary.get(label_name, "#00000000")
+                color_item.setBackground(QColor(color))
+                color_item.setToolTip(label_name)
+        self.load_presets()
+
+
+
+    def start_edit_tracking(self, item):
+        """Called when double-clicking to edit an item"""
+        self.currently_editing = True
+        self.current_edited_item = item
+        self.original_text = item.text()  # Store original value
+
+    def eventFilter(self, source, event):
+        """Handle Return/Enter key press during editing"""
+        if (event.type() == QtCore.QEvent.KeyPress and
+            event.key() in (QtCore.Qt.Key_Return, QtCore.Qt.Key_Enter) and
+            source.state() == QtWidgets.QAbstractItemView.EditingState):
+            
+            # Force close the editor
+            source.closePersistentEditor(source.currentItem())
+            return True  # Event handled
+        
+        return super().eventFilter(source, event)
+
+
+    def handle_preset_rename(self, item):
+        """Handle the actual renaming after edit completes"""
+        if not self.currently_editing or item != self.current_edited_item:
+            return
+        
+        # Store these values before potentially modifying state
+        was_editing = self.currently_editing
+        original_text = self.original_text
+        
+        # Reset editing state BEFORE making changes
+        self.currently_editing = False
+        self.current_edited_item = None
+        
+        # Only proceed if text actually changed
+        if item.text() != original_text:
+            if self.sender() == self.table_images_selection or self.sender() == self.table_session_selection:
+                # Pass success/failure back from rename_presets
+                success = self.rename_presets(item)
+                if not success:
+                    # Set the text back to original without triggering events
+                    self.blockSignals(True)
+                    item.setText(original_text)
+                    self.blockSignals(False)
+
 
 
     def init_styles(self, dialog=None, dialog_grid=None, session=None):
@@ -418,9 +546,20 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
                         elif dialog and element_name == "dialog_styles":
                             # Apply styles to the dialog if it matches the name in the theme file
                             style_sheet = ""
+                            style_sheet_header = ""
                             for selector, style in element_styles.items():
-                                style_sheet += f"{selector} {{{style}}}\n"
+                                
+                                if selector == "QHeaderView::section":
+                                    style_sheet_header += f"{selector} {{{style}}}\n"
+                                else:
+
+                                    style_sheet += f"{selector} {{{style}}}\n"
                             dialog.setStyleSheet(style_sheet)
+                            if isinstance(dialog, LabelManagerDialog):
+                                dialog.label_list.horizontalHeader().setStyleSheet(style_sheet_header)
+
+                        elif "dictionary_controls" in styles_dict and dialog and isinstance(dialog, MultiFolderSelector):
+                            style_dict = styles_dict["dictionary_controls"]
 
                         elif dialog_grid and element_name == "GridSettingsDialog":
                             # Apply styles specifically to GridSettingsDialog
@@ -494,7 +633,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
                 # Apply common button styles to QPushButton widgets
                 if "common_button_styles" in styles_dict:
                     button_styles = styles_dict["common_button_styles"]
-                    for button_name in ["theme_options_button", "add_folders_button", "delete_images_preset", "open_preset_button","update_preset_button","rainmeter_preset_button",
+                    for button_name in ["theme_options_button","labels_options_button", "add_folders_button", "delete_images_preset", "open_preset_button","update_preset_button","rainmeter_preset_button",
                                         "delete_session_preset", "save_session_presets_button", "start_session_button", "close_window_button"]:
                         if hasattr(self, button_name):
                             button = getattr(self, button_name)
@@ -559,51 +698,37 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
             print("No theme selected or theme file not found. Applying default styles.")
             self.reset_default_themes()
 
-        # Set item delegates and header settings for tables
-        max_length_delegate = MaxLengthDelegate(max_length=60)
-        self.table_images_selection.setItemDelegateForColumn(0, max_length_delegate)
-        self.table_session_selection.setItemDelegateForColumn(0, max_length_delegate)
-
-        # Prevent column resizing for table_imagess_selection
-        header_images = self.table_images_selection.horizontalHeader()
-        header_images.setSectionResizeMode(QHeaderView.Fixed)
-        header_images.setSectionsClickable(True)  # Make header non-clickable
-
-        # Prevent column resizing for table_session_selection
-        header_session = self.table_session_selection.horizontalHeader()
-        header_session.setSectionResizeMode(QHeaderView.Fixed)
-        header_session.setSectionsClickable(True)  # Make header non-clickable
-
-        # Ensure the selection behavior is correctly set after applying styles
-        self.table_session_selection.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
-        self.table_session_selection.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
-
 
 
     def update_selection_cache(self):
-        """
-        Initialize custom styles for the table widgets to change the selection color
-        and customize the header appearance.
-        """
-        # Get the selected row
-        selected_image_row = self.table_images_selection.currentRow()
-        selected_preset_row = self.table_session_selection.currentRow()
+        """Update the selected filename cache based on current table selections."""
+        # Only proceed if signals aren't blocked
+        if not self.table_images_selection.signalsBlocked() and not self.table_session_selection.signalsBlocked():
+            print("-- updating cache --")
+            # Track image selection by filename
+            selected_row = self.table_images_selection.currentRow()
+            if selected_row >= 0:
+                name_item = self.table_images_selection.item(selected_row, 1)  # Name column
+                if name_item:
+                    # Store both filename and row number
+                    self.selected_image_filename = name_item.text() + ".txt"
+                    self.selected_image_row = selected_row
 
-
-        self.image_selection_cache = selected_image_row
-        self.session_selection_cache = selected_preset_row
-
-        print("cache selected_image_row", selected_image_row)
-        print("cache session_selection_cache", selected_preset_row)
-
-
+            # Track session selection by filename
+            selected_row = self.table_session_selection.currentRow()
+            if selected_row >= 0:
+                name_item = self.table_session_selection.item(selected_row, 0)  # Name column
+                if name_item:
+                    # Store both filename and row number
+                    self.selected_session_filename = name_item.text() + ".txt"
+                    self.selected_session_row = selected_row
 
     def filter_presets(self):
         """Filter table_images_selection based on search_preset input."""
         search_text = self.search_preset.text().strip().lower()
         
         for row in range(self.table_images_selection.rowCount()):
-            item = self.table_images_selection.item(row, 0)  # Assuming filenames are in column 0
+            item = self.table_images_selection.item(row, 1)  # Assuming filenames are in column 1
             if item:
                 filename = item.text().lower()
                 self.table_images_selection.setRowHidden(row, search_text not in filename)
@@ -771,7 +896,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
 
     def save_session_presets(self):
         """Saves session details into a separate text file for each session."""
-        self.update_selection_cache()
+        print("--- Saving session preset ---")
         number_of_images = self.set_number_of_images.value()
         minutes = self.set_minutes.value()
         seconds = self.set_seconds.value()
@@ -840,41 +965,46 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
 
 
     def delete_images_files(self):
-        """Deletes the selected preset file and updates the preset table."""
-
+        """Deletes the selected preset file by sending it to the Recycle Bin and updates the preset table."""
         # Get the selected row
         selected_row = self.table_images_selection.currentRow()
-        self.update_selection_cache()
-
+        
         # Check if a row is actually selected
         if selected_row == -1:
             print('Warning', 'No preset selected for deletion.')
             return
-
-        # Get the file name from the first column of the selected row
-        file_item = self.table_images_selection.item(selected_row, 0)
+        
+        # Get the file name from the name column of the selected row
+        file_item = self.table_images_selection.item(selected_row, 1)  # Column index 1 for name
         if not file_item:
             self.show_info_message('Warning', 'No file associated with the selected preset.')
             return
-
+        
         file_name = file_item.text() + ".txt"
         file_path = os.path.join(self.images_presets_dir, file_name)
-
-        # Send the file to the recycle bin if it exists
+        
+        # Move the file to the Recycle Bin if it exists
         if os.path.exists(file_path):
             try:
-                send2trash(file_path)  # Send file to the recycle bin
-                # self.show_info_message('Success', f'Preset "{file_name}" deleted successfully.')
+                send2trash(file_path)
+                # Remove from preset_labels_dictionary if it exists
+                if file_name in self.preset_labels_dictionary:
+                    del self.preset_labels_dictionary[file_name]
+                    self.save_session_settings()  # Save the updated label assignments
             except Exception as e:
-                self.show_info_message('Error', f'Failed to delete preset. Error: {str(e)}')
+                self.show_info_message('Error', f'Failed to send preset to Recycle Bin. Error: {str(e)}')
                 return
         else:
             self.show_info_message('Warning', f'File "{file_name}" does not exist.')
-
+        
         # Reload the presets
-        self.load_presets(use_cache=False)
-
-
+        self.load_presets()
+        
+        # After deletion, select the new last row if the table isn't empty
+        if self.table_images_selection.rowCount() > 0:
+            new_selected_row = self.table_images_selection.rowCount() - 1
+            self.table_images_selection.selectRow(new_selected_row)
+            self.update_selection_cache()
 
     def open_preset(self):
         """Open the selected preset file in the default text editor."""
@@ -1076,8 +1206,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
         """Deletes the selected preset file by sending it to the Recycle Bin and updates the preset table."""
         # Get the selected row
         selected_row = self.table_session_selection.currentRow()
-        self.update_selection_cache()
-
+        
         # Check if a row is actually selected
         if selected_row == -1:
             print('Warning', 'No preset selected for deletion.')
@@ -1096,247 +1225,407 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
         if os.path.exists(file_path):
             try:
                 send2trash(file_path)
-                # self.show_info_message('Success', f'Preset "{file_name}" sent to Recycle Bin.')
             except Exception as e:
                 self.show_info_message('Error', f'Failed to send preset to Recycle Bin. Error: {str(e)}')
                 return
         else:
             self.show_info_message('Warning', f'File "{file_name}" does not exist.')
-
+        
         # Reload the presets
-        self.load_presets(use_cache=False)
+        self.load_presets()
+        
+        # After deletion, select the new last row if the table isn't empty
+        if self.table_session_selection.rowCount() > 0:
+            # Select the last row (rowCount() - 1)
+            new_selected_row = self.table_session_selection.rowCount() - 1
+            self.table_session_selection.selectRow(new_selected_row)
+            # Update the selection cache
+            self.update_selection_cache()
 
 
 
     def rename_presets(self, item):
         """Rename the preset file based on the new text typed in the row."""
+
+        print("-- Renaming file")
         try:
             # Determine which table triggered the rename
             if item.tableWidget() == self.table_images_selection:
                 cache = self.image_names_cache
                 rename_directory = self.images_presets_dir
+                name_col_index = 1
             elif item.tableWidget() == self.table_session_selection:
                 cache = self.session_names_cache
                 rename_directory = self.session_presets_dir
+                name_col_index = 0
             else:
-                return
-
+                # Unexpected table widget, exit early
+                return False
+                
             row = item.row()
-            if row >= len(cache) or row < 0:
-                #print(f"Invalid row: {row}")
-                return
+            if row >= len(cache):
+                return False
 
-            # Original and new filenames
+            # Get the old filename from the cache
             old_filename = cache[row]
             new_filename = item.text().strip() + ".txt"
+            
+            # Debugging output
+            print(f"Row: {row}")
+            print(f"Old filename: {old_filename}")
+            print(f"New filename: {new_filename}")
 
-            # File paths
             old_filepath = os.path.join(rename_directory, old_filename)
             new_filepath = os.path.join(rename_directory, new_filename)
 
+            # Check if the old file exists
             if not os.path.exists(old_filepath):
-                print(f"File not found: {old_filepath}")
-                self.load_presets(use_cache=False)
-                return
+                self.show_info_message('Error', f"Cannot rename: Original file '{old_filename}' does not exist.")
+                return False
 
-            # Check if the new file already exists
+            # Check if the new filename already exists or if it is invalid
             if os.path.exists(new_filepath):
-                print(f"File already exists: {new_filepath}")
                 self.show_info_message('Error', f"Cannot rename: '{new_filename}' already exists.")
-                self.load_presets(use_cache=False)  # Reload to revert changes
-                return
+                return False
 
-            # Attempt to rename
+            # Rename the file
             os.rename(old_filepath, new_filepath)
-            print(f"Renamed: {old_filepath} -> {new_filepath}")
+
+            # Update label assignment if this is a sentence preset
+            if item.tableWidget() == self.table_images_selection and old_filename in self.preset_labels_dictionary:
+                label = self.preset_labels_dictionary[old_filename]
+                del self.preset_labels_dictionary[old_filename]
+                self.preset_labels_dictionary[new_filename] = label
+            
+            # Update the cache after renaming
             cache[row] = new_filename
+            
+            # Save settings to persist label changes
+            self.save_session_settings()
+            
+            return True
 
         except Exception as e:
-            print(f"Error renaming preset: {e}")
             self.show_info_message('Error', f"Failed to rename preset. Error: {str(e)}")
-            self.load_presets(use_cache=True)  # Revert to the old name
+            return False
 
 
 
 
 
-
-
-
-    def load_presets(self, use_cache=False):
-        """Load existing presets into the table by calling specific functions."""
-        # Clear the tables and caches
-        self.table_images_selection.setRowCount(0)
-        self.table_session_selection.setRowCount(0)
+    def load_presets(self):
+        """Load existing presets into the tables and apply row selection from already loaded settings."""
+        # Block signals during reload
+        self.table_images_selection.blockSignals(True)
+        self.table_session_selection.blockSignals(True)
         
-        # Sort the tables by the first column (preset names) A to Z
-        self.table_images_selection.sortItems(0, QtCore.Qt.AscendingOrder)
-        self.table_session_selection.sortItems(0, QtCore.Qt.AscendingOrder)
+        try:
+            # Load image presets
+            self.load_table_images_selection()
+            
+            # Load session presets
+            self.load_session_presets()
+            
+            # Apply row selections after tables are loaded
+            selected_image_row = self.selected_image_row
+            selected_session_row = self.selected_session_row
+            
+            # Apply image selection
+            if 0 <= selected_image_row < self.table_images_selection.rowCount():
+                self.table_images_selection.selectRow(selected_image_row)
+                self.image_selection_cache = selected_image_row
+            
+            # Apply session selection
+            if 0 <= selected_session_row < self.table_session_selection.rowCount():
+                self.table_session_selection.selectRow(selected_session_row)
+        finally:
+            # Always unblock signals when done
+            self.table_images_selection.blockSignals(False)
+            self.table_session_selection.blockSignals(False)
+            # Manually update cache once at the end
+            self.update_selection_cache()
 
 
 
-        # Load image presets
-        self.load_table_images_selection(use_cache)
-        # Load session presets
-        self.load_session_presets(use_cache)
+    # Add new method to open the label manager
+    def open_label_manager(self):
+        """Open the label manager dialog."""
+        dialog = LabelManagerDialog(self, self.labels_color_dictionary)
+        self.init_styles(dialog=dialog)
+        if dialog.exec_():
+            self.labels_color_dictionary = dialog.get_labels()
 
-
-
-        self.select_rows_from_cache(use_cache)  
-  
-
-
-        
-
+            self.save_session_settings()  # Save the updated label settings
+            self.load_presets()  # Reload with new labels
 
 
 
 
 
-    def select_rows_from_cache(self, use_cache=False):
-        """Select the previously selected rows from the cache after an action."""
-        image_row = self.image_selection_cache
-        session_row = self.session_selection_cache
+
+    def load_table_images_selection(self):
+        """Load image preset files into the table and restore selection properly."""
+        # Remember the currently selected filename before clearing
+        self.table_images_selection.blockSignals(True)
+        try:
+
+            selected_filename = getattr(self, 'selected_image_filename', None)
+            print("selected_image_filename : " , selected_filename)
 
 
 
-        if image_row >= 0 and image_row < self.table_images_selection.rowCount():
-            self.table_images_selection.selectRow(image_row)
-
-        elif image_row >= 0 and image_row >= self.table_images_selection.rowCount():
-            self.table_images_selection.selectRow(self.table_images_selection.rowCount()-1)
-
-
-        if session_row >= 0 and session_row < self.table_session_selection.rowCount():
-            self.table_session_selection.selectRow(session_row)
-
-        elif session_row >= 0 and session_row >= self.table_session_selection.rowCount():
-            self.table_session_selection.selectRow(self.table_session_selection.rowCount()-1)
-
-
-    def load_table_images_selection(self, use_cache=False):
-        """Load image preset files into the image presets table and update the cache, including an 'Images' column."""
-        if use_cache:
-            files = self.image_names_cache
-        else:
+            # Temporarily disable sorting during loading
+            was_sorting_enabled = self.table_images_selection.isSortingEnabled()
+            self.table_images_selection.setSortingEnabled(False)
+            
+            # Clear the table
+            self.table_images_selection.setRowCount(0)
+            
+            # Load files from cache or directory
             self.image_names_cache = []
-            files = os.listdir(self.images_presets_dir)
-
-        # Set up table with 2 columns: Name and Images
-        self.table_images_selection.setColumnCount(2)
-        self.table_images_selection.setHorizontalHeaderLabels(['Name', 'Images'])
-
-        for filename in files:
-            if filename.endswith(".txt"):
-                # Prepare the display name (remove .txt)
-                display_name = filename[:-4]  # Remove the last 4 characters (.txt)
-
-                # Insert item into the image presets table
-                row_position = self.table_images_selection.rowCount()
-                self.table_images_selection.insertRow(row_position)
-
-                # Add the display name
-                name_item = QTableWidgetItem(display_name)
-                name_item.setFlags(name_item.flags() | Qt.ItemIsEditable)
-                self.table_images_selection.setItem(row_position, 0, name_item)
-
-                # Count the number of image file paths in the text file
-                image_count = 0
-                file_path = os.path.join(self.images_presets_dir, filename)
-                try:
-                    with open(file_path, 'r', encoding='utf-8') as file:
-                        image_count = len(file.readlines())
-                except UnicodeDecodeError as e:
-                    print(f"Error decoding file {file_path}: {e}")
-
-
-                # Add the image count to the second column
-                count_item = QTableWidgetItem(str(image_count))
-                count_item.setTextAlignment(Qt.AlignCenter)  # Center the text
-                count_item.setFlags(count_item.flags() & ~Qt.ItemIsEditable)  # Make non-editable
-
-                self.table_images_selection.setItem(row_position, 1, count_item)
-
-                # Update cache with the current filenames
-                self.image_names_cache.append(filename)
+            try:
+                files = sorted(os.listdir(self.images_presets_dir))
+            except FileNotFoundError:
+                files = []
+            
+            # Set up table columns
+            self.table_images_selection.setColumnCount(3)
+            self.table_images_selection.setHorizontalHeaderLabels(['Label', 'Name', 'Images'])
+            
             # Set column widths
+            self.table_images_selection.setColumnWidth(0, 40)
+            self.table_images_selection.setColumnWidth(1, 295)
+            self.table_images_selection.setColumnWidth(2, 80)
+
+            # Dictionary to map labels to sort order prefixes (01_, 02_, etc.)
+            ordered_labels = self.get_ordered_labels_from_settings()
+            label_sort_prefixes = {}
+            
+            # Create sort prefixes based on the order in settings (01_, 02_, etc.)
+            for i, label in enumerate(ordered_labels):
+                # Use two digits with leading zero for better sorting
+                prefix = f"{i+1:02d}_"
+                label_sort_prefixes[label] = prefix
+
+            table_delegate = TableLabelDelegate(self.table_images_selection)
+            self.table_images_selection.setItemDelegateForColumn(0, table_delegate)
+
+            max_length_delegate = MaxLengthDelegate(max_length=60)
+            self.table_images_selection.setItemDelegateForColumn(1, max_length_delegate)
+
+            # Prevent column resizing for table_imagess_selection
+            header_images = self.table_images_selection.horizontalHeader()
+            header_images.setSectionResizeMode(QHeaderView.Fixed)
+            header_images.setSectionsClickable(True)  # Make header non-clickable
 
 
-        self.table_images_selection.setColumnWidth(0, 350)  # Adjust as needed
-        self.table_images_selection.setColumnWidth(1, 50)  # Adjust as needed
 
+            # Create a mapping of filenames to row positions
+            filename_to_row = {}
+            
+            # Load files into table rows
+            for filename in files:
+                if filename.endswith(".txt"):
+                    # Get display name (remove .txt extension)
+                    display_name = os.path.splitext(filename)[0]
+                    
+                    # Insert new row
+                    row_position = self.table_images_selection.rowCount()
+                    self.table_images_selection.insertRow(row_position)
+                    
+                    # Store mapping of filename to row position
+                    filename_to_row[filename] = row_position
+                    
+                    # Get label info
+                    label_name = self.preset_labels_dictionary.get(filename, "Default")
+                    label_color = self.labels_color_dictionary.get(label_name, "#00000000")
+                    sort_prefix = label_sort_prefixes.get(label_name, "99_")  # Use high prefix for undefined labels
 
-
-    def load_session_presets(self, use_cache=False):
-        """Load session preset files into the session presets table and update the cache, including 'Total' and 'Time' columns."""
-        
-        if use_cache:
-            files = self.session_names_cache
-        else:
-            self.session_names_cache = []
-            files = os.listdir(self.session_presets_dir)
-
-
-        # Set up table with 3 columns: Name, Total, and Time
-        self.table_session_selection.setColumnCount(3)
-        self.table_session_selection.setHorizontalHeaderLabels(['Name', 'Images', 'Time'])
-
-        # Set column widths
-        self.table_session_selection.setColumnWidth(0, 380)  # Adjust as needed
-        self.table_session_selection.setColumnWidth(1, 60)  # Adjust as needed
-        self.table_session_selection.setColumnWidth(2, 100)  # Adjust as needed
-
-        for filename in files:
-            if filename.endswith(".txt"):
-                # Prepare the display name (remove .txt)
-                display_name = filename[:-4]  # Remove the last 4 characters (.txt)
-
-                # Insert item into the session presets table
-                row_position = self.table_session_selection.rowCount()
-                self.table_session_selection.insertRow(row_position)
-
-                # Add the display name
-                name_item = QTableWidgetItem(display_name)
-                name_item.setFlags(name_item.flags() | Qt.ItemIsEditable)
-                self.table_session_selection.setItem(row_position, 0, name_item)
-
-                # Load JSON data from the file
-                file_path = os.path.join(self.session_presets_dir, filename)
-                with open(file_path, 'r') as file:
+                    # Add color label item (Column 0)
+                    color_item = QtWidgets.QTableWidgetItem(sort_prefix)
+                    color_item.setBackground(QColor(label_color))
+                    color_item.setToolTip(label_name)
+                    color_item.setFlags(color_item.flags() & ~Qt.ItemIsEditable)
+                    self.table_images_selection.setItem(row_position, 0, color_item)
+                    
+                    # Add name item (Column 1)
+                    name_item = QtWidgets.QTableWidgetItem(display_name)
+                    name_item.setFlags(name_item.flags() | Qt.ItemIsEditable)
+                    self.table_images_selection.setItem(row_position, 1, name_item)
+                    
+                    # Count images in preset file (Column 2)
+                    file_path = os.path.join(self.images_presets_dir, filename)
+                    image_count = 0
                     try:
-                        session_data = json.load(file)
-                        total_images = session_data.get("total_images", 0)
-                        time = session_data.get("time", "0m 0s")
-                    except json.JSONDecodeError:
-                        total_images = 0
-                        time = "0m 0s"
+                        with open(file_path, 'r', encoding='utf-8') as f:
+                            image_count = len(f.readlines())
+                    except:
+                        try:
+                            with open(file_path, 'r', encoding='iso-8859-1') as f:
+                                image_count = len(f.readlines())
+                        except:
+                            image_count = 0
+                    
+                    count_item = QtWidgets.QTableWidgetItem(str(image_count))
+                    count_item.setTextAlignment(QtCore.Qt.AlignCenter)
+                    count_item.setFlags(count_item.flags() & ~Qt.ItemIsEditable)
+                    self.table_images_selection.setItem(row_position, 2, count_item)
+                    
+                    # Cache the filename
+                    self.image_names_cache.append(filename)
+            
+            # Re-enable sorting if it was enabled before
+            self.table_images_selection.setSortingEnabled(was_sorting_enabled)
+            
+            # Restore selection using filename mapping
+            if selected_filename in filename_to_row:
+                self.table_images_selection.selectRow(filename_to_row[selected_filename])
+                self.table_images_selection.setFocus()
+            elif hasattr(self, 'selected_image_row') and 0 <= self.selected_image_row < self.table_images_selection.rowCount():
+                # Fallback to row number if filename not found
+                self.table_images_selection.selectRow(self.selected_image_row)
+                self.table_images_selection.setFocus()
 
-                # Add the total images and time to the respective columns
-                total_item = QTableWidgetItem(str(total_images))
-                total_item.setTextAlignment(Qt.AlignCenter)  # Center the text
-                total_item.setFlags(total_item.flags() & ~Qt.ItemIsEditable)  # Make non-editable
+        finally:
+            self.table_images_selection.blockSignals(False)
 
-                time_item = QTableWidgetItem(time)
-                time_item.setTextAlignment(Qt.AlignCenter)  # Center the text
-                time_item.setFlags(time_item.flags() & ~Qt.ItemIsEditable)  # Make non-editable
-
-                self.table_session_selection.setItem(row_position, 1, total_item)
-                self.table_session_selection.setItem(row_position, 2, time_item)
-
-                # Update cache with the current filenames
-                self.session_names_cache.append(filename)
+    def get_ordered_labels_from_settings(self):
+        """
+        Retrieve the ordered list of labels from settings.
+        Implement this method to read the order from your settings file.
+        """
+        # Example implementation - replace with your actual code to read from settings
+        # This should return a list of labels in the order they appear in your settings
+        return list(self.labels_color_dictionary.keys())
 
 
+    def load_session_presets(self):
+        """Load session preset files with proper selection restoration."""
+
+        self.table_session_selection.blockSignals(True)
+        
+
+        # Remember the currently selected filename before clearing
+        selected_filename = getattr(self, 'selected_session_filename', None)
+        try:
+            # Temporarily disable sorting during loading
+            was_sorting_enabled = self.table_session_selection.isSortingEnabled()
+            self.table_session_selection.setSortingEnabled(False)
+            
+            # Clear the table
+            self.table_session_selection.setRowCount(0)
+            
+            # Load files from cache or directory
+
+            self.session_names_cache = []
+            try:
+                files = sorted(os.listdir(self.session_presets_dir))
+            except FileNotFoundError:
+                files = []
+        
+            # Set up table with 3 columns
+            self.table_session_selection.setColumnCount(3)
+            self.table_session_selection.setHorizontalHeaderLabels(['Name', 'Images', 'Time'])
+            
+            # Set column widths
+            self.table_session_selection.setColumnWidth(0, 380)
+            self.table_session_selection.setColumnWidth(1, 60)
+            self.table_session_selection.setColumnWidth(2, 20)
+        
+
+            # Set item delegates and header settings for table
+            max_length_delegate = MaxLengthDelegate(max_length=60)
+
+            self.table_session_selection.setItemDelegateForColumn(1, max_length_delegate)
+            # Prevent column resizing for table_session_selection
+
+
+            header_session = self.table_session_selection.horizontalHeader()
+            header_session.setSectionResizeMode(QHeaderView.Fixed)
+            header_session.setSectionsClickable(True)  # Make header non-clickable
+
+
+            # Ensure the selection behavior is correctly set after applying styles
+            self.table_session_selection.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
+            self.table_session_selection.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
 
 
 
- 
+            # Create a mapping of filenames to row positions
+            filename_to_row = {}
+            
+            # Load files into table rows
+            for filename in files:
+                if filename.endswith(".txt"):
+                    # Get display name (remove .txt extension)
+                    display_name = os.path.splitext(filename)[0]
+                    
+                    # Insert new row
+                    row_position = self.table_session_selection.rowCount()
+                    self.table_session_selection.insertRow(row_position)
+                    
+                    # Store mapping of filename to row position
+                    filename_to_row[filename] = row_position
+                    
+                    # Add name item (Column 0)
+                    name_item = QtWidgets.QTableWidgetItem(display_name)
+                    name_item.setFlags(name_item.flags() | Qt.ItemIsEditable)
+                    self.table_session_selection.setItem(row_position, 0, name_item)
+                    
+                    # Load session data from file
+                    file_path = os.path.join(self.session_presets_dir, filename)
+                    total_images = 0
+                    time_str = "0m 0s"
+                    
+                    try:
+                        with open(file_path, 'r', encoding='utf-8') as f:
+                            session_data = json.load(f)
+                            total_images = session_data.get("total_images", 0)
+                            minutes = session_data.get("minutes", 0)
+                            seconds = session_data.get("seconds", 0)
+                            time_str = f"{minutes}m {seconds}s"
+                    except:
+                        pass
+                    
+                    # Add images count (Column 1)
+                    count_item = QtWidgets.QTableWidgetItem(str(total_images))
+                    count_item.setTextAlignment(QtCore.Qt.AlignCenter)
+                    count_item.setFlags(count_item.flags() & ~Qt.ItemIsEditable)
+                    self.table_session_selection.setItem(row_position, 1, count_item)
+                    
+                    # Add time string (Column 2)
+                    time_item = QtWidgets.QTableWidgetItem(time_str)
+                    time_item.setTextAlignment(QtCore.Qt.AlignCenter)
+                    time_item.setFlags(time_item.flags() & ~Qt.ItemIsEditable)
+                    self.table_session_selection.setItem(row_position, 2, time_item)
+                    
+                    # Cache the filename
+                    self.session_names_cache.append(filename)
+            
+            # Re-enable sorting if it was enabled before
+            self.table_session_selection.setSortingEnabled(was_sorting_enabled)
+            
+            # Restore selection using filename mapping
+            if selected_filename in filename_to_row:
+                self.table_session_selection.selectRow(filename_to_row[selected_filename])
+                self.table_session_selection.setFocus()
+            elif hasattr(self, 'selected_session_row') and 0 <= self.selected_session_row < self.table_session_selection.rowCount():
+                # Fallback to row number if filename not found
+                self.table_session_selection.selectRow(self.selected_session_row)
+                self.table_session_selection.setFocus()
+
+        finally:
+            self.table_session_selection.blockSignals(False)
+     
+
+    def start_session_launcher(self):
+        self.save_session_settings()
+        self.start_session_from_files()
+
     def start_session_from_files(self, image_preset_path=None, session_preset_path=None, randomize_settings=True):
         """
         Starts a session using specified presets or selected files.
         """
-        # Load image preset
-
         # Helper function to convert time string to seconds
         def convert_time_to_seconds(time_str):
             minutes, seconds = 0, 0
@@ -1347,43 +1636,63 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
                 seconds = int(time_str.split('s')[0])
             return minutes * 60 + seconds
 
+        def remove_missing_files(image_file_path):
+                """
+                Removes missing image files from the given preset file and updates it.
+                """
+                selected_images = []
 
-        if image_preset_path:
-            selected_images = self.remove_missing_files(image_preset_path)
-        else:
-            selected_row = self.table_images_selection.currentRow()
-            if selected_row == -1:
-                self.show_info_message('Error', 'No image preset selected.')
-                return
-            file_item = self.table_images_selection.item(selected_row, 0)
-            image_preset_path = os.path.join(self.images_presets_dir, f"{file_item.text()}.txt")
-            selected_images = self.remove_missing_files(image_preset_path)
+                # Read image paths from the image preset file
+                try:
+                    with open(image_file_path, 'r', encoding='utf-8') as f:
+                        selected_images = [line.strip() for line in f.readlines() if line.strip()]
+                        print(f"Loaded {len(selected_images)} images from {image_file_path}.")
+                except FileNotFoundError:
+                    print(f"Image file not found: {image_file_path}")
+                    return []
 
-        # Load session preset
-        if session_preset_path:
-            try:
-                with open(session_preset_path, 'r') as f:
-                    session_details = json.load(f)
-            except (FileNotFoundError, json.JSONDecodeError) as e:
-                self.show_info_message('Error', f"Error reading session preset: {str(e)}")
-                return
-        else:
-            selected_row = self.table_session_selection.currentRow()
-            if selected_row == -1:
-                self.show_info_message('Error', 'No session preset selected.')
-                return
-            file_item = self.table_session_selection.item(selected_row, 0)
-            session_preset_path = os.path.join(self.session_presets_dir, f"{file_item.text()}.txt")
-            try:
-                with open(session_preset_path, 'r') as f:
-                    session_details = json.load(f)
-            except (FileNotFoundError, json.JSONDecodeError):
-                self.show_info_message('Error', f"Error reading session preset: {session_preset_path}")
-                return
+                # Remove missing files from the list
+                selected_images = [img for img in selected_images if os.path.exists(img)]
+                print(f"Filtered to {len(selected_images)} existing images from {image_file_path}.")
+
+                # Save the updated list of images back to the preset file
+                try:
+                    with open(image_file_path, 'w', encoding='utf-8') as f:
+                        f.writelines([img + '\n' for img in selected_images])
+                        print(f"Updated image preset file saved: {image_file_path}")
+                except IOError as e:
+                    print(f"Error writing to image file: {image_file_path} - {e}")
+
+                return selected_images
+
+
+
+
+        if image_preset_path == None:
+
+            image_preset_path = os.path.join(self.images_presets_dir, self.selected_image_filename )
+        if session_preset_path == None:
+            session_preset_path = os.path.join(self.session_presets_dir, self.selected_session_filename )
+
+        randomize_settings = self.randomize_settings
+
+
+
+
+        selected_images = remove_missing_files(image_preset_path)
+
+        try:
+            with open(session_preset_path, 'r') as f:
+                session_details = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            self.show_info_message('Error', f"Error reading session preset: {session_preset_path}")
+            return
+
 
         # Randomize images if applicable
         if randomize_settings:
             random.shuffle(selected_images)
+            print("-- Images have been shuffled randomly.")
 
         # Get session details
         session_time = convert_time_to_seconds(session_details.get('time', '0m 0s'))
@@ -1415,41 +1724,6 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
         self.save_session_settings()
 
 
-    def remove_missing_files(self, image_file_path):
-            """
-            Removes missing image files from the given preset file and updates it.
-
-            Args:
-                image_file_path (str): The path to the image preset file.
-
-            Returns:
-                list: A list of existing image paths.
-            """
-            selected_images = []
-
-            # Read image paths from the image preset file
-            try:
-                with open(image_file_path, 'r', encoding='utf-8') as f:
-                    selected_images = [line.strip() for line in f.readlines() if line.strip()]
-                    print(f"Loaded {len(selected_images)} images from {image_file_path}.")
-            except FileNotFoundError:
-                print(f"Image file not found: {image_file_path}")
-                return []
-
-            # Remove missing files from the list
-            selected_images = [img for img in selected_images if os.path.exists(img)]
-            print(f"Filtered to {len(selected_images)} existing images from {image_file_path}.")
-
-            # Save the updated list of images back to the preset file
-            try:
-                with open(image_file_path, 'w', encoding='utf-8') as f:
-                    f.writelines([img + '\n' for img in selected_images])
-                    print(f"Updated image preset file saved: {image_file_path}")
-            except IOError as e:
-                print(f"Error writing to image file: {image_file_path} - {e}")
-
-            return selected_images
-
 
 
 
@@ -1458,141 +1732,163 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
 
 
     def load_session_settings(self):
+        """Load session settings with filename-based selection tracking."""
         session_settings_path = os.path.join(self.presets_dir, 'session_settings.txt')
-
-        # Default settings to be used if there's a problem with the file
+        
+        # Default settings
         default_settings = {
             "selected_image_row": -1,
             "selected_session_row": -1,
+            "selected_image_filename": None,
+            "selected_session_filename": None,
             "randomize_settings": False,
             "auto_start_settings": False,
             "theme_settings": 'default_theme.txt',
-            "shortcuts": self.default_shortcuts
+            "shortcuts": self.default_shortcuts,
+            "labels_color_dictionary": {"Default": "#00000000"},
+            "preset_labels_dictionary": {},
+            "image_names_cache": [],
+            "session_names_cache": []
         }
-
-        # Load current settings if the file exists
-        if os.path.exists(session_settings_path):
-            try:
-                with open(session_settings_path, 'r') as f:
-                    current_settings = json.load(f)
-            except (FileNotFoundError, json.JSONDecodeError):
-                current_settings = default_settings.copy()  # Fallback to default if there is an error
-                print("Error loading session settings. Using default settings.")
-        else:
-            current_settings = default_settings.copy()  # Use default settings if the file doesn't exist
-            print("Session settings file not found. Using default settings.")
-
-        # Validate the shortcuts
-        if not self.validate_shortcuts(current_settings.get('shortcuts', {})):
-            print("Invalid shortcuts detected. Resetting to default shortcuts.")
-            self.reset_shortcuts()  # Reset only the shortcuts to the default
-            current_settings['shortcuts'] = self.default_shortcuts  # Ensure in-memory settings reflect the reset
-
-        # Apply the valid or reset settings
-        self.shortcut_settings = current_settings.get('shortcuts', self.default_shortcuts)
-        self.randomize_settings = current_settings.get('randomize_settings', False)
-        self.auto_start_settings = current_settings.get('auto_start_settings', False)
-        self.current_theme = current_settings.get('theme_settings', 'default_theme.txt')
-
-        # Toggle the randomize and auto-start settings
-        self.randomize_toggle.setChecked(self.randomize_settings)  # Toggle based on loaded value
-        self.auto_start_toggle.setChecked(self.auto_start_settings)  # Toggle based on loaded value
-
-        # --- Row selection logic ---
-        selected_image_row = current_settings.get('selected_image_row', -1)
-        selected_session_row = current_settings.get('selected_session_row', -1)
-
-        # Ensure selected rows are within the table's bounds
-        if 0 <= selected_image_row < self.table_images_selection.rowCount():
-            self.table_images_selection.selectRow(selected_image_row)
-        else:
-            print("Invalid or out-of-bounds selected_image_row, no selection applied.")
-
-        if 0 <= selected_session_row < self.table_session_selection.rowCount():
-            self.table_session_selection.selectRow(selected_session_row)
-        else:
-            print("Invalid or out-of-bounds selected_session_row, no selection applied.")
-
-        self.update_selection_cache()
-        # Save the session settings after loading them (in case anything needs updating)
-        self.save_session_settings()
+        
+        # Try to load settings from file
+        try:
+            if os.path.exists(session_settings_path):
+                with open(session_settings_path, 'r', encoding='utf-8') as f:
+                    loaded_settings = json.load(f)
+                    
+                    # Merge with default settings
+                    for key in default_settings:
+                        if key in loaded_settings:
+                            default_settings[key] = loaded_settings[key]
+        except Exception as e:
+            print(f"Error loading session settings: {str(e)}")
+        
+        # Apply settings
+        self.selected_image_row = default_settings["selected_image_row"]
+        self.selected_session_row = default_settings["selected_session_row"]
+        self.selected_image_filename = default_settings["selected_image_filename"]
+        self.selected_session_filename = default_settings["selected_session_filename"]
+        self.randomize_settings = default_settings["randomize_settings"]
+        self.auto_start_settings = default_settings["auto_start_settings"]
+        self.current_theme = default_settings["theme_settings"]
+        self.shortcut_settings = default_settings["shortcuts"]
+        self.labels_color_dictionary = default_settings["labels_color_dictionary"]
+        self.preset_labels_dictionary = default_settings["preset_labels_dictionary"]
+        
+        # Set UI elements
+        self.randomize_toggle.setChecked(self.randomize_settings)
+        self.auto_start_toggle.setChecked(self.auto_start_settings)
+        
+        # Initialize caches if they exist in settings
+        if "image_names_cache" in default_settings:
+            self.image_names_cache = default_settings["image_names_cache"]
+        if "session_names_cache" in default_settings:
+            self.session_names_cache = default_settings["session_names_cache"]
 
 
     def save_session_settings(self):
-        """Save the current session settings to the session_settings.txt file."""
-        session_settings_path = os.path.join(self.presets_dir, 'session_settings.txt')
+        print("---Saving settings---")
 
-        # Collect the current settings
-        current_settings = {
-            "selected_image_row": self.table_images_selection.currentRow(),
-            "selected_session_row": self.table_session_selection.currentRow(),
+        """Save session settings including selected filenames."""
+        session_settings_path = os.path.join(self.presets_dir, 'session_settings.txt')
+        
+        # Get current selections by filename
+        selected_image_filename = None
+        selected_session_filename = None
+        
+        # Get image selection
+        selected_image_row = self.table_images_selection.currentRow()
+        if selected_image_row >= 0:
+            name_item = self.table_images_selection.item(selected_image_row, 1)
+            if name_item:
+                selected_image_filename = name_item.text() + ".txt"
+        
+        # Get session selection
+        selected_session_row = self.table_session_selection.currentRow()
+        if selected_session_row >= 0:
+            name_item = self.table_session_selection.item(selected_session_row, 0)
+            if name_item:
+                selected_session_filename = name_item.text() + ".txt"
+        
+        # Create settings dictionary
+        settings = {
+            "selected_image_row": selected_image_row,  # Keep for backward compatibility
+            "selected_session_row": selected_session_row,  # Keep for backward compatibility
+            "selected_image_filename": selected_image_filename,
+            "selected_session_filename": selected_session_filename,
             "randomize_settings": self.randomize_settings,
             "auto_start_settings": self.auto_start_settings,
             "theme_settings": self.current_theme,
-            "shortcuts": self.shortcut_settings
+            "shortcuts": self.shortcut_settings,
+            "labels_color_dictionary": self.labels_color_dictionary,
+            "preset_labels_dictionary": self.preset_labels_dictionary,
+            "image_names_cache": self.image_names_cache if hasattr(self, 'image_names_cache') else [],
+            "session_names_cache": self.session_names_cache if hasattr(self, 'session_names_cache') else []
         }
+        
+        # Save to file
+        try:
+            with open(session_settings_path, 'w', encoding='utf-8') as f:
+                json.dump(settings, f, indent=4)
+        except Exception as e:
+            print(f"Error saving session settings: {str(e)}")
 
-        # Save the settings to the file
-        with open(session_settings_path, 'w') as f:
-            json.dump(current_settings, f, indent=4)
-        print("Session settings saved.")
 
-
-    def validate_shortcuts(self, shortcuts):
-        valid = True
-
-        for window, actions in shortcuts.items():
-            for action, shortcut in actions.items():
-                try:
-                    # Validate shortcut format
-                    if len(shortcut) == 1 and shortcut.isalpha():
-                        continue  # Single-letter shortcuts are allowed, skip validation
-
-                    # Attempt to create a QKeySequence to validate the shortcut
-                    sequence = QtGui.QKeySequence(shortcut)
-                    if sequence.isEmpty():
-                        raise ValueError("Invalid QKeySequence")
-                    
-                except Exception as e:
-                    print(f"Invalid shortcut: {shortcut} for {window} - {str(e)}")
-                    valid = False
-
-        return valid
 
     def apply_shortcuts_main_window(self):
         """Apply the shortcuts for the main window."""
 
         self.main_window_start_shortcut = QtWidgets.QShortcut(QtGui.QKeySequence(self.shortcut_settings["main_window"]["start"]), self)
-        self.main_window_start_shortcut.activated.connect(self.start_session_from_files)
+        self.main_window_start_shortcut.activated.connect(self.start_session_launcher)
 
         self.main_window_close_shortcut = QtWidgets.QShortcut(QtGui.QKeySequence(self.shortcut_settings["main_window"]["close"]), self)
         self.main_window_close_shortcut.activated.connect(self.close)
 
-    def reset_shortcuts(self):
-        # Path to session settings file
-        session_settings_path = os.path.join(self.presets_dir, 'session_settings.txt')
-        
-        # Load current settings
-        if os.path.exists(session_settings_path):
-            try:
-                with open(session_settings_path, 'r') as f:
-                    current_settings = json.load(f)
-            except (FileNotFoundError, json.JSONDecodeError):
-                current_settings = {}
-        else:
-            current_settings = {}
-
-        # Reset only the shortcuts
-        current_settings['shortcuts'] = self.default_shortcuts
-
-        # Write updated settings back to file
-        with open(session_settings_path, 'w') as f:
-            json.dump(current_settings, f, indent=4)
-        
-        print("Shortcuts reset to defaults.")
+        self.main_window_cycle_label = QtWidgets.QShortcut(QtGui.QKeySequence(self.shortcut_settings["main_window"]["cycle_label"]), self)
+        self.main_window_cycle_label.activated.connect(self.cycle_label)
 
 
-    
+    def cycle_label(self):
+        selected_row = self.table_images_selection.currentRow()
+        if selected_row >= 0:
+            # Get the selected file name
+            file_item = self.table_images_selection.item(selected_row, 1)  # Name column
+            if file_item:
+                filename = file_item.text() + ".txt"
+                
+                # Get all label names sorted
+                label_names = sorted(list(self.labels_color_dictionary.keys()))
+                
+                # Get current label
+                current_label = self.preset_labels_dictionary.get(filename, "Default")
+                
+                # Find next label in the sequence
+                try:
+                    current_index = label_names.index(current_label)
+                    next_index = (current_index + 1) % len(label_names)
+                    next_label = label_names[next_index]
+                except ValueError:
+                    # If current label not found (shouldn't happen unless corrupted data)
+                    next_label = "Default"
+                
+                # Set the new label
+                self.preset_labels_dictionary[filename] = next_label
+                
+                # Update the color cell
+                color_item = self.table_images_selection.item(selected_row, 0)
+                if color_item:
+                    color = self.labels_color_dictionary.get(next_label, "#00000000")
+                    color_item.setBackground(QColor(color))
+                    color_item.setToolTip(next_label)
+
+                # Save the settings & Reload table
+                self.save_session_settings()
+                self.load_presets()
+
+
+                return True  # Event handled
+
 
     def update_randomize_settings(self, state):
         """Update the randomize_settings variable based on the checkbox state."""
@@ -1601,6 +1897,8 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
             self.randomize_settings = True
         else:
             self.randomize_settings = False
+        self.save_session_settings()
+
 
     def update_auto_start_settings(self, state):
         """Update the randomize_settings variable based on the checkbox state."""
@@ -1609,7 +1907,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
             self.auto_start_settings = True
         else:
             self.auto_start_settings = False
-        print(self.auto_start_settings)
+        self.save_session_settings()
 
 
 
@@ -1638,6 +1936,63 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
                 self.init_styles() # Load the theme
 
 
+
+
+# Delegate for the main table's label column (column 0)
+class TableLabelDelegate(QStyledItemDelegate):
+    def __init__(self, parent=None):
+        super(TableLabelDelegate, self).__init__(parent)
+        
+    def paint(self, painter, option, index):
+        # Check if this is column 0 (the label column)
+        if index.column() == 0:
+            # Get the original background color stored in the item
+            color = index.data(Qt.BackgroundRole)
+            
+            # If the item is selected, we still want to show some indication
+            if option.state & QStyle.State_Selected:
+                # Draw a border to indicate selection but keep the original background
+                painter.save()
+                painter.setPen(Qt.white)
+                painter.fillRect(option.rect, color)
+                painter.drawRect(option.rect.adjusted(1, 1, -1, -1))
+                painter.restore()
+            else:
+                # Not selected, just fill with the original color
+                painter.fillRect(option.rect, color)
+            
+            return
+        
+        # For all other columns, use the default delegate painting
+        super(TableLabelDelegate, self).paint(painter, option, index)
+
+# Delegate for the label manager's color column (column 1)
+class LabelColorDelegate(QStyledItemDelegate):
+    def __init__(self, parent=None):
+        super(LabelColorDelegate, self).__init__(parent)
+        
+    def paint(self, painter, option, index):
+        # Check if this is column 1 (the color column)
+        if index.column() == 1:
+            # Get the original background color stored in the item
+            color = index.data(Qt.BackgroundRole)
+            
+            # If the item is selected, we still want to show some indication
+            if option.state & QStyle.State_Selected:
+                # Draw a border to indicate selection but keep the original background
+                painter.save()
+                painter.setPen(Qt.white)
+                painter.fillRect(option.rect, color)
+                painter.drawRect(option.rect.adjusted(1, 1, -1, -1))
+                painter.restore()
+            else:
+                # Not selected, just fill with the original color
+                painter.fillRect(option.rect, color)
+            
+            return
+        
+        # For all other columns, use the default delegate painting
+        super(LabelColorDelegate, self).paint(painter, option, index)
 
 class SessionDisplay(QWidget, Ui_session_display):
     closed = QtCore.pyqtSignal() # Needed here for close event to work.
@@ -3241,6 +3596,267 @@ class MultiFolderSelector(QtWidgets.QDialog):
             return  # Do not accept the dialog
 
         super(MultiFolderSelector, self).accept()
+
+
+
+
+
+# Custom QTableWidget that enforces at least one selected row
+class EnforcedSelectionTable(QTableWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.current_row = 0
+        # Install event filter to catch mouse clicks
+        self.viewport().installEventFilter(self)
+        
+    def selectionCommand(self, index, event):
+        # This method gets called whenever selection is about to change
+        # Get the current selection command
+        command = super().selectionCommand(index, event)
+        
+        # If this would clear selection, adjust the command
+        if command == QItemSelectionModel.Clear:
+            # Store the last selected row
+            selected_rows = self.selectionModel().selectedRows()
+            if selected_rows:
+                self.current_row = selected_rows[0].row()
+            return QItemSelectionModel.NoUpdate
+            
+        return command
+        
+    def mousePressEvent(self, event):
+        # Store the current selected row before handling the mouse press
+        selected_rows = self.selectionModel().selectedRows()
+        if selected_rows:
+            self.current_row = selected_rows[0].row()
+        
+        # Let QTableWidget handle the mouse press
+        super().mousePressEvent(event)
+        
+        # Ensure we still have a selection after the event
+        if not self.selectionModel().selectedRows():
+            # No row is selected, re-select the previous row
+            self.selectRow(self.current_row)
+            
+    def mouseReleaseEvent(self, event):
+        # Store the current selected row
+        selected_rows = self.selectionModel().selectedRows()
+        if selected_rows:
+            self.current_row = selected_rows[0].row()
+            
+        # Let QTableWidget handle the mouse release
+        super().mouseReleaseEvent(event)
+        
+        # Check if we have a selection after the event
+        if not self.selectionModel().selectedRows():
+            # No row is selected, re-select the previous row
+            self.selectRow(self.current_row)
+            
+    def viewportEvent(self, event):
+        # Additional protection for viewport events
+        result = super().viewportEvent(event)
+        
+        # After any viewport event, check if we have a selection
+        if event.type() in (QEvent.MouseButtonPress, QEvent.MouseButtonRelease, QEvent.MouseButtonDblClick):
+            if not self.selectionModel().selectedRows():
+                self.selectRow(self.current_row)
+                
+        return result
+
+
+class LabelManagerDialog(QtWidgets.QDialog):
+    def __init__(self, parent=None, labels_dict=None):
+        super().__init__(parent)
+        self.parent = parent
+        self.labels_dict = labels_dict or {"Default": "#00000000"}
+        self.setup_ui()
+        
+    def setup_ui(self):
+        self.setWindowTitle("Label Manager")
+        self.setMinimumSize(400, 300)
+        
+        layout = QVBoxLayout()
+        
+        # Label list
+        self.label_list = EnforcedSelectionTable()  # Using custom table widget
+        self.label_list.setColumnCount(2)
+        self.label_list.setHorizontalHeaderLabels(["Label Name", "Color"])
+        self.label_list.horizontalHeader().setSectionResizeMode(0, QtWidgets.QHeaderView.Stretch)
+        self.label_list.horizontalHeader().setSectionResizeMode(1, QtWidgets.QHeaderView.Fixed)
+        self.label_list.horizontalHeader().setFocusPolicy(Qt.NoFocus)
+        self.label_list.setColumnWidth(1, 80)
+        self.label_list.setEditTriggers(QTableWidget.NoEditTriggers)
+        self.label_list.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.label_list.verticalHeader().setVisible(False)
+        # Populate the list
+        self.refresh_label_list()
+        
+        # Buttons
+        buttons_layout = QHBoxLayout()
+        
+        self.add_button = QPushButton("Add Label")
+        self.edit_button = QPushButton("Edit Label")
+        self.delete_button = QPushButton("Delete Label")
+        
+        buttons_layout.addWidget(self.add_button)
+        buttons_layout.addWidget(self.edit_button)
+        buttons_layout.addWidget(self.delete_button)
+        
+        # Connect signals
+        self.add_button.clicked.connect(self.add_label)
+        self.edit_button.clicked.connect(self.edit_label)
+        self.delete_button.clicked.connect(self.delete_label)
+        # Add selection change handler to control the delete button state
+        self.label_list.itemSelectionChanged.connect(self.update_button_states)
+            
+        # Dialog buttons
+        dialog_buttons = QHBoxLayout()
+        self.ok_button = QPushButton("OK")
+        
+        dialog_buttons.addStretch()
+        dialog_buttons.addWidget(self.ok_button)
+        
+        self.ok_button.clicked.connect(self.accept)
+        
+        # Add everything to main layout
+        layout.addWidget(self.label_list)
+        layout.addLayout(buttons_layout)
+        layout.addLayout(dialog_buttons)
+        
+        self.setLayout(layout)
+        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
+        color_delegate = LabelColorDelegate(self.label_list)
+        self.label_list.setItemDelegateForColumn(1, color_delegate)
+        
+        # Select the first row by default
+        self.label_list.selectRow(0)
+        # Initially update button states based on the first row selection
+        self.update_button_states()
+        self.init_message_boxes()
+
+    def update_button_states(self):
+        """Update button states based on current selection"""
+        current_row = self.label_list.currentRow()
+        if current_row >= 0:
+            current_name = self.label_list.item(current_row, 0).text()
+            # Disable delete button if "Default" is selected
+            self.delete_button.setEnabled(current_name != "Default")
+        else:
+            # If nothing is selected, disable delete button
+            self.delete_button.setEnabled(False)
+
+    def init_message_boxes(self):
+        """Initialize custom message box settings."""
+        self.message_box = QtWidgets.QMessageBox(self)
+        self.message_box.setIcon(QtWidgets.QMessageBox.NoIcon)  # Set to no icon by default
+    
+    def show_info_message(self, title, message):
+        """Show an information message box without an icon."""
+        self.message_box.setWindowTitle(title)
+        self.message_box.setText(message)
+        self.message_box.exec_()
+
+
+
+    def refresh_label_list(self):
+        self.label_list.setRowCount(0)
+        
+        for name, color in self.labels_dict.items():
+            row = self.label_list.rowCount()
+            self.label_list.insertRow(row)
+            
+            # Label name
+            name_item = QTableWidgetItem(name)
+            self.label_list.setItem(row, 0, name_item)
+            
+            # Color swatch
+            color_item = QTableWidgetItem("")
+            color_item.setBackground(QColor(color))
+            self.label_list.setItem(row, 1, color_item)
+    
+    def add_label(self):
+        name, ok = QInputDialog.getText(self, "New Label", "Enter label name:")
+        if ok and name:
+            if name in self.labels_dict:
+                self.show_info_message('Duplicate', "Label name already exists.")
+                return
+            
+            color = QColorDialog.getColor()
+            if color.isValid():
+                self.labels_dict[name] = color.name()
+                self.refresh_label_list()
+    
+    def edit_label(self):
+        current_row = self.label_list.currentRow()
+        if current_row < 0:
+            self.show_info_message("No Selection", "Please select a label to edit.")
+            return
+        
+        current_name = self.label_list.item(current_row, 0).text()
+        
+        # Don't allow editing the Default label
+        if current_name == "Default":
+            color = QColorDialog.getColor(QColor(self.labels_dict["Default"]))
+            if color.isValid():
+                self.labels_dict["Default"] = color.name()
+                self.refresh_label_list()
+                print("Color Updated", "Default label color has been updated.")
+            return
+        
+        new_name, ok = QInputDialog.getText(self, "Edit Label", "Enter new label name:", text=current_name)
+        if ok and new_name:
+            if new_name != current_name and new_name in self.labels_dict:
+                self.show_info_message("Duplicate", "Label name already exists.")
+                return
+            
+            color = QColorDialog.getColor(QColor(self.labels_dict[current_name]))
+            if color.isValid():
+                # If name changed, we need to update any presets using this label
+                if new_name != current_name:
+                    # Store the color value
+                    color_value = self.labels_dict[current_name]
+                    # Delete the old key
+                    del self.labels_dict[current_name]
+                    # Create new key with same color
+                    self.labels_dict[new_name] = color_value
+                    
+                    # Update preset assignments
+                    if hasattr(self.parent, 'preset_labels_dictionary'):
+                        for preset, label in self.parent.preset_labels_dictionary.items():
+                            if label == current_name:
+                                self.parent.preset_labels_dictionary[preset] = new_name
+                
+                # Update the color value
+                self.labels_dict[new_name] = color.name()
+                self.refresh_label_list()
+    
+    def delete_label(self):
+        current_row = self.label_list.currentRow()
+        if current_row < 0:
+            self.show_info_message("No Selection", "Please select a label to delete.")
+            return
+        
+        current_name = self.label_list.item(current_row, 0).text()
+        
+        # Don't allow deleting the Default label
+        if current_name == "Default":
+            self.show_info_message("Reserved", "Cannot delete the Default label.")
+            return
+        
+
+        # Remove the label
+        del self.labels_dict[current_name]
+        
+        # Reassign any presets using this label to Default
+        if hasattr(self.parent, 'preset_labels_dictionary'):
+            for preset, label in self.parent.preset_labels_dictionary.items():
+                if label == current_name:
+                    self.parent.preset_labels_dictionary[preset] = "Default"
+        
+        self.refresh_label_list()
+            
+    def get_labels(self):
+        return self.labels_dict
 
 
 
