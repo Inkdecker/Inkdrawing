@@ -38,8 +38,8 @@ This is a free tool to users can use to practice drawing using references from t
 
 # Usage
 [Download](https://github.com/Inkdecker/Inkdrawing/releases/latest/download/Inkdrawing.exe) and run the executable, no installation needed.
-
-
+>Note : The settings, themes and preset files gets stored inside the **"drawing_presets"** folder, this folder gets created upon launch if missing.
+ 
 1 - Click **"Add Folders"**, then select 1 or more folders containing image files **(.jpg, .jpeg, .png, .webp, .tiff, .jfif, .bmp)** you wish to use for practice.
 
 >Note : You can drag your favorite folders to the left column of the explorer to pin them for a quick access. Right click to remove them.
