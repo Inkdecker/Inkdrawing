@@ -2,7 +2,7 @@
   <img src="https://github.com/Inkdecker/Inkdrawing/blob/main/ui/resources/icons/sample.png" alt="Project Screenshot" width="400"/>
 </p>
 
-# <img src="https://raw.githubusercontent.com/Inkdecker/Inkdrawing/main/ui/resources/icons/Inkdrawing.png" width="25" style="vertical-align: middle;" /> Inkdrawing
+# <img src="https://raw.githubusercontent.com/Inkdecker/Inkdrawing/main/ui/resources/icons/Inkdrawing.png" width="50" style="vertical-align: middle;" /> Inkdrawing
 
 Rework of adnv3k's GestureSesh app :
 
