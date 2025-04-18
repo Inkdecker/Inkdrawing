@@ -16,7 +16,6 @@ import numpy as np
 from pygame import mixer
 
 
-
 # PyQT 
 from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtCore import Qt, QEvent, QItemSelectionModel
