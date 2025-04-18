@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="https://github.com/Inkdecker/session_drawing/blob/main/ui/resources/icons/sample.png" alt="Project Screenshot" width="400"/>
+  <img src="https://github.com/Inkdecker/Inkdrawing/blob/main/ui/resources/icons/sample.png" alt="Project Screenshot" width="400"/>
 </p>
 
-# <img src="https://raw.githubusercontent.com/Inkdecker/session_drawing/main/ui/resources/icons/session_drawing.png" width="25" style="vertical-align: middle;" /> Session Drawing
+# <img src="https://raw.githubusercontent.com/Inkdecker/Inkdrawing/main/ui/resources/icons/Inkdrawing.png" width="25" style="vertical-align: middle;" /> Inkdrawing
 
 Rework of adnv3k's GestureSesh app :
 
@@ -29,14 +29,16 @@ This is a free tool to users can use to practice drawing using references from t
 	- 04.12.2024: Ability to create Rainmeter profiles to export the slideshows.
 	- 30.12.2024: Main functions available from commande line.
 	- 28.03.2025: Search function for the image presets.
-	
-	- (New) 07.04.2025: Added color labels to the image preset table.
+	- 07.04.2025: Added color labels to the image preset table.
+
+	- (New) 18.04.2025: Renamed from session_drawing to Inkdrawing.
 	
 ##### Supported files :  .jpg, .jpeg, .png, .webp, .tiff, .jfif, .bmp
 
 
 # Usage
-[Download](https://github.com/Inkdecker/session_drawing/releases/download/1.1/session_drawing.exe) and run the executable, no installation needed.
+[Download](https://github.com/Inkdecker/Inkdrawing/releases/latest/download/Inkdrawing.exe) and run the executable, no installation needed.
+
 
 1 - Click **"Add Folders"**, then select 1 or more folders containing image files **(.jpg, .jpeg, .png, .webp, .tiff, .jfif, .bmp)** you wish to use for practice.
 
@@ -63,7 +65,7 @@ The image preset can be exported and used as rainmeter slideshow. To do so, sele
  
 ##### Example :
 ```batch
-session_drawing.exe create_preset -folder_list "D:\Desktop\Image_Folder_1" "D:\Desktop\Image_Folder_2" -preset_name "Image_preset_1" -output_folder "D:\Desktop\Output_Folder"
+Inkdrawing.exe create_preset -folder_list "D:\Desktop\Image_Folder_1" "D:\Desktop\Image_Folder_2" -preset_name "Image_preset_1" -output_folder "D:\Desktop\Output_Folder"
 ```
 
 ### Update preset
@@ -72,7 +74,7 @@ session_drawing.exe create_preset -folder_list "D:\Desktop\Image_Folder_1" "D:\D
   - 
 ##### Example :
 ```batch
-session_drawing.exe update_preset -preset_path "D:\Desktop\Image_preset_1.txt"
+Inkdrawing.exe update_preset -preset_path "D:\Desktop\Image_preset_1.txt"
 ```
 
 ### Start session
@@ -83,7 +85,7 @@ session_drawing.exe update_preset -preset_path "D:\Desktop\Image_preset_1.txt"
  
 ##### Example :
 ```batch
-session_drawing.exe start_session_from_files -image_preset_path "D:\Desktop\Image_preset_1.txt" -session_preset_path "D:\Desktop\Session_preset_1.txt" -randomize_settings True
+Inkdrawing.exe start_session_from_files -image_preset_path "D:\Desktop\Image_preset_1.txt" -session_preset_path "D:\Desktop\Session_preset_1.txt" -randomize_settings True
 ```
 
 
@@ -144,4 +146,4 @@ Move image to "..\rainmeter_presets\Deleted Files" | Mouse button 1
 Open Image folder | Mouse button 2
 
 ## Licence
-[GNU General Public License v3.0](https://github.com/Inkdecker/session_drawing/blob/main/LICENSE)
+[GNU General Public License v3.0](https://github.com/Inkdecker/Inkdrawing/blob/main/LICENSE)
