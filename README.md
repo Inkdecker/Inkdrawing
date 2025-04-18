@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="https://github.com/Inkdecker/Inkdrawing/blob/main/ui/resources/icons/sample.png" alt="Project Screenshot" width="400"/>
-</p>
-
 # <img src="https://raw.githubusercontent.com/Inkdecker/Inkdrawing/main/ui/resources/icons/Inkdrawing.png" width="50" style="vertical-align: middle;" /> Inkdrawing
 
 Rework of adnv3k's GestureSesh app :
@@ -10,6 +6,10 @@ https://github.com/adnv3k/GestureSesh
 
 
 This is a free tool to users can use to practice drawing using references from their own libraries.
+
+<p align="center">
+  <img src="https://github.com/Inkdecker/Inkdrawing/blob/main/ui/resources/icons/sample.png" alt="Project Screenshot" width="400"/>
+</p>
 
 # New features
 	- Ability to save / rename both image and session presets
