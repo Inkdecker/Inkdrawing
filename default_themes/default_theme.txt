@@ -1,8 +1,8 @@
 {
     "MainWindow": {
         "QMainWindow": "background: rgb(30, 30, 30); color: rgb(220, 220, 220);",
-        "window_icon": "ui/resources/icons/session_drawing.png",
-        "icon": "ui/resources/icons/session_drawing_48x48.png"
+        "window_icon": "ui/resources/icons/Inkdrawing.png",
+        "icon": "ui/resources/icons/Inkdrawing_48x48.png"
 
     },
     "FileDialog": {
@@ -71,8 +71,8 @@
     },
     "session_display, image_display": {
         "QWidget": "background: rgb(20, 20, 20);",
-        "window_icon": "ui/resources/icons/session_drawing.png",
-        "icon": "ui/resources/icons/session_drawing_48x48.png"
+        "window_icon": "ui/resources/icons/Inkdrawing.png",
+        "icon": "ui/resources/icons/Inkdrawing_48x48.png"
     },
     "text_display": {
         "QWidget": "color: rgb(220, 220, 220);background: rgb(40, 40, 40);padding: 0 30px;border: none",

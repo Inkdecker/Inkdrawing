@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'D:\Desktop\ART TUTORIALS\SHORTCUTS & STUFF\session_drawing\ui\main_window.ui'
+# Form implementation generated from reading ui file 'D:\Desktop\ART TUTORIALS\SHORTCUTS & STUFF\Inkdrawing\ui\main_window.ui'
 #
 # Created by: PyQt5 UI code generator 5.15.11
 #
@@ -85,7 +85,7 @@ class Ui_MainWindow(object):
         MainWindow.setFocusPolicy(QtCore.Qt.ClickFocus)
         MainWindow.setAcceptDrops(True)
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap(":/icons/icons/session_drawing.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon.addPixmap(QtGui.QPixmap(":/icons/icons/Inkdrawing.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         MainWindow.setWindowIcon(icon)
         MainWindow.setWindowOpacity(4.0)
         MainWindow.setToolTip("")
@@ -630,7 +630,7 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
-        MainWindow.setWindowTitle(_translate("MainWindow", "Reference Practice"))
+        MainWindow.setWindowTitle(_translate("MainWindow", "Reference practice - Inkdrawing"))
         self.label.setText(_translate("MainWindow", "<html><head/><body><p><img src=\":/icons/icons/session_drawing_48x48.png\"/></p></body></html>"))
         self.select_images.setText(_translate("MainWindow", "  Images presets"))
         self.theme_options_button.setText(_translate("MainWindow", "Themes"))

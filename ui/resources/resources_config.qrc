@@ -23,13 +23,13 @@
     <file>icons/theme_icon_4.png</file>
     <file>icons/_Blank.ico</file>
     <file>icons/_Blank.png</file>
-    <file>icons/session_drawing.ico</file>
-    <file>icons/session_drawing.png</file>
-    <file>icons/session_drawing_dark.png</file>
-    <file>icons/session_drawing_light.png</file>
-    <file>icons/session_drawing_48x48.png</file>
-    <file>icons/session_drawing_transparent_48x48.png</file>
-    <file>icons/session_drawing_transparent_light_48x48.png</file>
+    <file>icons/Inkdrawing.ico</file>
+    <file>icons/Inkdrawing.png</file>
+    <file>icons/Inkdrawing_dark.png</file>
+    <file>icons/Inkdrawing_light.png</file>
+    <file>icons/Inkdrawing_48x48.png</file>
+    <file>icons/Inkdrawing_transparent_48x48.png</file>
+    <file>icons/Inkdrawing_transparent_light_48x48.png</file>
   </qresource>
 
 </RCC>
