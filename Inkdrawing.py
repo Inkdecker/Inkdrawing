@@ -1135,7 +1135,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
             return
 
         # Get the file name from the first column of the selected row
-        file_item = self.table_images_selection.item(selected_row, 0)
+        file_item = self.table_images_selection.item(selected_row, 1)
         if not file_item:
             self.show_info_message('Warning', 'No file associated with the selected preset.')
             return
@@ -1311,7 +1311,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
             
             # Save settings to persist label changes
             self.save_session_settings()
-            
+            self.update_selection_cache()
             return True
 
         except Exception as e:
@@ -2182,7 +2182,7 @@ class SessionDisplay(QWidget, Ui_session_display):
             'scale_factors': [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5,
              1.6, 1.7, 1.8, 1.9, 2, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 3],
             'default_scale_index':7,
-            'default_width': 500,
+            'default_width': 900,
             'scale_index' : 7}
 
 
