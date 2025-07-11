@@ -1059,7 +1059,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
                 else:
                     print('Warning: No preset selected for update.')
                 return
-            file_item = self.table_images_selection.item(selected_row, 0)
+            file_item = self.table_images_selection.item(selected_row, 1)
             if not file_item:
                 if is_gui:
                     self.show_info_message('Warning', 'No file associated with the selected preset.')
