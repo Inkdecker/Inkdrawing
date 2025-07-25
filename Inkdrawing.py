@@ -58,7 +58,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
         # Define default shortcuts
         self.default_shortcuts = {
             "main_window": {
-                "start": "S", 
+                "start": "Return", 
                 "close": "Escape",
                 "cycle_label": "\u00b2"
             },
@@ -1022,7 +1022,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
             return
 
         # Get the file name from the first column of the selected row
-        file_item = self.table_images_selection.item(selected_row, 0)
+        file_item = self.table_images_selection.item(selected_row, 1)
         if not file_item:
             self.show_info_message('Warning', 'No file associated with the selected preset.')
             return
