@@ -850,11 +850,69 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
                 )
             # Reload presets
             self.load_presets()
+            self.select_preset_by_name(preset_name, "images")
         else:
             # Print output for command-line usage
             print(f'Preset "{preset_name}" created with {valid_count} valid file(s) and saved to {preset_filename}.')
             if invalid_count:
                 print(f'{invalid_count} invalid file(s) were not added. Supported file types: {", ".join(self.valid_extensions)}.')
+
+
+    def select_preset_by_name(self, preset_name, table_type="images"):
+        """
+        Select a preset in the specified table by its name.
+        
+        Args:
+            preset_name (str): The name of the preset to select (without .txt extension)
+            table_type (str): Either "images" or "session" to specify which table to search
+        
+        Returns:
+            bool: True if preset was found and selected, False otherwise
+        """
+        # Determine which table to use
+        if table_type == "images":
+            table = self.table_images_selection
+        elif table_type == "session":
+            table = self.table_session_selection
+        else:
+            print(f"Invalid table_type: {table_type}. Use 'images' or 'session'.")
+            return False
+        
+        # Block signals during selection to prevent unwanted triggers
+        table.blockSignals(True)
+        
+        try:
+            # Search through all rows in the table
+            for row in range(table.rowCount()):
+                # Get the preset name from the first column (assuming that's where the name is)
+                item = table.item(row, 1)
+                if item and item.text() == preset_name:
+                    # Found the preset, select this row
+                    table.selectRow(row)
+                    
+                    # Update the appropriate selection cache
+                    if table_type == "images":
+                        self.selected_image_row = row
+                        self.image_selection_cache = row
+                    elif table_type == "session":
+                        self.selected_session_row = row
+                    
+                    # Scroll to make sure the selected row is visible
+                    table.scrollToItem(item, QtWidgets.QAbstractItemView.PositionAtCenter)
+                    
+                    print(f"Selected preset '{preset_name}' at row {row} in {table_type} table")
+                    return True
+            
+            # Preset not found
+            print(f"Preset '{preset_name}' not found in {table_type} table")
+            return False
+            
+        finally:
+            # Always unblock signals
+            table.blockSignals(False)
+            # Update selection cache
+            self.update_selection_cache()
+
 
     def get_next_preset_number(self):
         preset_files = [f for f in os.listdir(self.images_presets_dir) if f.startswith('preset_') and f.endswith('.txt')]
@@ -3019,37 +3077,39 @@ class SessionDisplay(QWidget, Ui_session_display):
 
 
     def zoom_plus(self):
-        current_scale_index = self.image_mods['scale_index']
+        if not self.toggle_resize_status:
+            current_scale_index = self.image_mods['scale_index']
 
-        if current_scale_index < len(self.image_mods['scale_factors']) - 1: 
-            new_scale_index = current_scale_index + 1
-            self.image_mods['scale_index'] = new_scale_index
+            if current_scale_index < len(self.image_mods['scale_factors']) - 1: 
+                new_scale_index = current_scale_index + 1
+                self.image_mods['scale_index'] = new_scale_index
 
-            #print("Zooming Out" + str(self.image_mods['scale_factors'][new_scale_index]))
-            self.display_image(play_sound=False, update_status = False)
-
-
+                #print("Zooming Out" + str(self.image_mods['scale_factors'][new_scale_index]))
+                self.display_image(play_sound=False, update_status = False)
 
 
-            # If the grid is currently displayed, reapply it to the new size
-            if self.grid_displayed:
-                self.apply_grid()
+
+
+                # If the grid is currently displayed, reapply it to the new size
+                if self.grid_displayed:
+                    self.apply_grid()
 
 
     def zoom_minus(self):
-        current_scale_index = self.image_mods['scale_index']
+        if not self.toggle_resize_status:
+            current_scale_index = self.image_mods['scale_index']
 
-        if current_scale_index > 0: 
-            new_scale_index= current_scale_index - 1
-            self.image_mods['scale_index'] = new_scale_index
+            if current_scale_index > 0: 
+                new_scale_index= current_scale_index - 1
+                self.image_mods['scale_index'] = new_scale_index
 
-            self.display_image(play_sound=False, update_status = False)
+                self.display_image(play_sound=False, update_status = False)
 
-            self.grid_overlay.setGeometry(self.image_display.geometry())
+                self.grid_overlay.setGeometry(self.image_display.geometry())
 
-            # If the grid is currently displayed, reapply it to the new size
-            if self.grid_displayed:
-                self.apply_grid()
+                # If the grid is currently displayed, reapply it to the new size
+                if self.grid_displayed:
+                    self.apply_grid()
 
 
 
@@ -3438,9 +3498,8 @@ class MaxLengthDelegate(QStyledItemDelegate):
 
             # Subclass to enable multifolder selection.
 
-
 class MultiFolderSelector(QtWidgets.QDialog):
-    def __init__(self, parent=None, preset_name="preset_1", stylesheet=""):
+    def __init__(self, parent=None, preset_name="", stylesheet=""):
         super(MultiFolderSelector, self).__init__(parent)
         self.setWindowTitle("Select Folders")
 
@@ -3462,8 +3521,8 @@ class MultiFolderSelector(QtWidgets.QDialog):
 
         # Preset Name Input (below the list widget)
         self.preset_name_edit = QtWidgets.QLineEdit(self)
-        self.preset_name_edit.setPlaceholderText("Enter Preset Name")
-        self.preset_name_edit.setText(preset_name)
+        self.preset_name_edit.setPlaceholderText("Will be generated when folders are selected")
+        self.preset_name_edit.setText("")  # Start empty like the writing version
         layout.addWidget(self.preset_name_edit)
 
         # Buttons
@@ -3526,7 +3585,33 @@ class MultiFolderSelector(QtWidgets.QDialog):
             return '...\\' + os.sep.join(parts[-3:])  # Show the last three parts of the path
         return normalized_path  # If less than or equal, return as is
 
-      
+    def get_unique_preset_name(self, base_name):
+        """Generate a unique preset name by adding incremental number if needed"""
+        name = base_name
+        counter = 1
+        images_presets_dir = self.parent().images_presets_dir  # Assume parent has this attribute
+        while os.path.exists(os.path.join(images_presets_dir, name + ".txt")):
+            name = f"{base_name} ({counter})"
+            counter += 1
+        return name
+
+    def update_preset_name(self):
+        """Update the preset name based on selected folders"""
+        if not self.selected_folders:
+            self.preset_name_edit.setText("")
+            return
+        
+        # Get the last folder name from the first selected folder
+        first_folder = os.path.basename(self.selected_folders[0].rstrip(os.sep))
+        
+        if len(self.selected_folders) == 1:
+            base_name = f"IMG_{first_folder}"
+        else:
+            base_name = f"IMG_{first_folder} + ({len(self.selected_folders)-1})"
+        
+        unique_name = self.get_unique_preset_name(base_name)
+        self.preset_name_edit.setText(unique_name)
+
     def multi_select_folders(self):
         file_dialog = QtWidgets.QFileDialog(self)
         file_dialog.setFileMode(QtWidgets.QFileDialog.DirectoryOnly)
@@ -3569,8 +3654,9 @@ class MultiFolderSelector(QtWidgets.QDialog):
                     self.selected_folders.append(folder)
                     formatted_path = self.format_folder_path(folder)
                     self.list_widget.addItem(formatted_path)
-
-
+            
+            # Update the preset name after adding folders
+            self.update_preset_name()
 
     def remove_folder(self):
         selected_items = self.list_widget.selectedItems()
@@ -3592,6 +3678,9 @@ class MultiFolderSelector(QtWidgets.QDialog):
 
                 # Remove the item from the list widget
                 self.list_widget.takeItem(self.list_widget.row(item))
+        
+        # Update the preset name after removing folders
+        self.update_preset_name()
 
     def get_selected_folders(self):
         return self.selected_folders
