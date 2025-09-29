@@ -30,9 +30,11 @@ This is a free tool to users can use to practice drawing using references from t
 	- 30.12.2024: Main functions available from commande line.
 	- 28.03.2025: Search function for the image presets.
 	- 07.04.2025: Added color labels to the image preset table.
-
-	- (New) 18.04.2025: Renamed from session_drawing to Inkdrawing.
+	- 18.04.2025: Renamed from session_drawing to Inkdrawing.
 	
+	- (New) 29.09.2025: Add images to current preset.
+	- (New) 29.09.2025: Auto contrast.
+
 ##### Supported files :  .jpg, .jpeg, .png, .webp, .tiff, .jfif, .bmp
 
 
