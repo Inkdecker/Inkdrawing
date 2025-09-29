@@ -631,7 +631,7 @@ class Ui_MainWindow(object):
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
         MainWindow.setWindowTitle(_translate("MainWindow", "Reference practice - Inkdrawing"))
-        self.label.setText(_translate("MainWindow", "<html><head/><body><p><img src=\":/icons/icons/session_drawing_48x48.png\"/></p></body></html>"))
+        self.label.setText(_translate("MainWindow", "<html><head/><body><p><img src=\":/icons/icons/Inkdrawing_48x48.png\"/></p></body></html>"))
         self.select_images.setText(_translate("MainWindow", "  Images presets"))
         self.theme_options_button.setText(_translate("MainWindow", "Themes"))
         self.labels_options_button.setText(_translate("MainWindow", "Labels"))

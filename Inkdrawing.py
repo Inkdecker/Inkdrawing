@@ -64,6 +64,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
             },
             "session_window": {
                 "toggle_resize": "R",
+                "enable_resize": "Shift+R",
                 "rotate_right": "Q",
                 "rotate_left": "F",
                 "always_on_top": "A",
@@ -77,6 +78,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
                 "copy_path": "Ctrl+C",
                 "delete_image": "Ctrl+D",
                 "grayscale": "T",
+                "contrast":"F1",
                 "grid_settings": "Ctrl+G",
                 "toggle_grid": "G",
                 "zoom_in": "S",
@@ -676,7 +678,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
                 if session and "session_buttons" in styles_dict:
                     button_styles = styles_dict["session_buttons"]
                     button_names = [
-                        "grid_button", "grayscale_button", "lock_scale_button",
+                        "grid_button", "grayscale_button","contrast_button", "lock_scale_button",
                         "flip_horizontal_button", "flip_vertical_button",
                         "previous_image", "pause_timer", "stop_session",
                         "next_image", "copy_image_path_button",
@@ -762,9 +764,8 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
         return super().eventFilter(obj, event)
 
 
-######### PRESET SECTION ######### 
-
-    def create_preset(self, folder_list=None, preset_name=None, output_folder=None, is_gui=True):
+    ######### PRESET SECTION ######### 
+    def create_preset(self, folder_list=None, preset_name=None, output_folder=None, is_gui=True, append_to_existing=False):
         """
         Opens a dialog to select multiple folders or processes a given list of folders.
         For command-line usage, folder_list and preset_name are used directly, and is_gui is set to False.
@@ -784,6 +785,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
             if dialog.exec_() == QtWidgets.QDialog.Accepted:
                 selected_dirs = dialog.get_selected_folders()
                 preset_name = dialog.get_preset_name()  # Retrieve the preset name from dialog
+                append_to_existing = dialog.get_append_mode()  # Get the append mode from dialog
                 
                 # Only show "No Selection" message if accepted with no selection
                 if not selected_dirs:
@@ -827,35 +829,86 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
         
         # Write valid file paths to the preset file
         preset_filename = os.path.join(target_folder, f'{preset_name}.txt')
-        with open(preset_filename, 'w', encoding='utf-8') as f:
-            for file_path in sorted(checked_files['valid_files']):
-                formatted_path = os.path.normpath(file_path)  # Normalize to platform-specific path separators
-                f.write(f'{formatted_path}\n')
         
-        # Notify the user
-        valid_count = len(checked_files["valid_files"])
-        invalid_count = len(checked_files["invalid_files"])
-        
-        if is_gui:
-            if invalid_count:
-                self.show_info_message(
-                    'Files Processed',
-                    f'{preset_name} : {valid_count} file(s) added.\n'
-                    f'{invalid_count} file(s) not added. '
-                    f'Supported file types: {", ".join(self.valid_extensions)}.'
-                )
+        if append_to_existing and os.path.exists(preset_filename):
+            # Read existing files first
+            existing_files = set()
+            try:
+                with open(preset_filename, 'r', encoding='utf-8') as f:
+                    existing_files = {line.strip() for line in f if line.strip()}
+            except Exception as e:
+                if is_gui:
+                    self.show_info_message('Error', f'Failed to read existing preset: {str(e)}')
+                else:
+                    print(f'Failed to read existing preset: {str(e)}')
+                return
+            
+            # Combine existing files with new files (set automatically handles duplicates)
+            all_valid_files = existing_files | checked_files['valid_files']
+            new_files_count = len(checked_files['valid_files'] - existing_files)
+            total_files_count = len(all_valid_files)
+            
+            # Write combined files
+            with open(preset_filename, 'w', encoding='utf-8') as f:
+                for file_path in sorted(all_valid_files):
+                    formatted_path = os.path.normpath(file_path)
+                    f.write(f'{formatted_path}\n')
+            
+            # Notify the user about appending
+            if is_gui:
+                invalid_count = len(checked_files["invalid_files"])
+                if invalid_count:
+                    self.show_info_message(
+                        'Files Added',
+                        f'{new_files_count} new file(s) added to {preset_name}.\n'
+                        f'Total files in preset: {total_files_count}\n'
+                        f'{invalid_count} file(s) not added. '
+                        f'Supported file types: {", ".join(self.valid_extensions)}.'
+                    )
+                else:
+                    self.show_info_message(
+                        'Success', 
+                        f'{new_files_count} new file(s) added to {preset_name}.\n'
+                        f'Total files in preset: {total_files_count}'
+                    )
+                # Reload presets
+                self.load_presets()
+                self.select_preset_by_name(preset_name, "images")
             else:
-                self.show_info_message(
-                    'Success', f'{preset_name} : {valid_count} file(s) saved to {preset_filename}'
-                )
-            # Reload presets
-            self.load_presets()
-            self.select_preset_by_name(preset_name, "images")
+                print(f'{new_files_count} new file(s) added to preset "{preset_name}". Total files: {total_files_count}')
         else:
-            # Print output for command-line usage
-            print(f'Preset "{preset_name}" created with {valid_count} valid file(s) and saved to {preset_filename}.')
-            if invalid_count:
-                print(f'{invalid_count} invalid file(s) were not added. Supported file types: {", ".join(self.valid_extensions)}.')
+            # Create new preset or overwrite existing
+            with open(preset_filename, 'w', encoding='utf-8') as f:
+                for file_path in sorted(checked_files['valid_files']):
+                    formatted_path = os.path.normpath(file_path)
+                    f.write(f'{formatted_path}\n')
+            
+            # Notify the user
+            valid_count = len(checked_files["valid_files"])
+            invalid_count = len(checked_files["invalid_files"])
+            
+            if is_gui:
+                if invalid_count:
+                    self.show_info_message(
+                        'Files Processed',
+                        f'{preset_name} : {valid_count} file(s) added.\n'
+                        f'{invalid_count} file(s) not added. '
+                        f'Supported file types: {", ".join(self.valid_extensions)}.'
+                    )
+                else:
+                    self.show_info_message(
+                        'Success', f'{preset_name} : {valid_count} file(s) saved to {preset_filename}'
+                    )
+                # Reload presets
+                self.load_presets()
+                self.select_preset_by_name(preset_name, "images")
+            else:
+                # Print output for command-line usage
+                print(f'Preset "{preset_name}" created with {valid_count} valid file(s) and saved to {preset_filename}.')
+                if invalid_count:
+                    print(f'{invalid_count} invalid file(s) were not added. Supported file types: {", ".join(self.valid_extensions)}.')
+
+
 
 
     def select_preset_by_name(self, preset_name, table_type="images"):
@@ -2255,12 +2308,13 @@ class SessionDisplay(QWidget, Ui_session_display):
             self.end_of_entry = False
         else:
             self.end_of_entry = True
-        
+            
     def init_image_mods(self):
         self.image_mods = {
             'hflip': False,
             'vflip': False,
             'grayscale': False,
+            'contrast_level': 0,  # Track how many times contrast has been applied (not persisted between images)
             'scale_factors': [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5,
              1.6, 1.7, 1.8, 1.9, 2, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 3],
             'default_scale_index':7,
@@ -2394,8 +2448,19 @@ class SessionDisplay(QWidget, Ui_session_display):
         self.grayscale_button.clicked.connect(self.grayscale)
         self.grayscale_button.setToolTip(f"[{self.shortcuts['session_window']['grayscale']}] Toggle grayscale")
 
+
+
+
+        self.contrast_button.clicked.connect(self.auto_contrast)
+        self.contrast_button.setToolTip(f"[{self.shortcuts['session_window']['contrast']}] Auto contrast")
+
+
         self.lock_scale_button.clicked.connect(self.toggle_resize)
         self.lock_scale_button.setToolTip(f"[{self.shortcuts['session_window']['toggle_resize']}] Prevent rescaling of the window")
+        self.lock_scale_button.setToolTip(f"[{self.shortcuts['session_window']['enable_resize']}] Allow rescaling of the window")
+
+
+        
 
         # Vertical and Horizontal flips
         self.flip_horizontal_button.clicked.connect(self.flip_horizontal)
@@ -2443,6 +2508,13 @@ class SessionDisplay(QWidget, Ui_session_display):
         self.toggle_resize_key = QtWidgets.QShortcut(QtGui.QKeySequence(self.shortcuts["session_window"]["toggle_resize"]), self)
         self.toggle_resize_key.activated.connect(self.toggle_resize)
 
+
+        self.enable_resize_key = QtWidgets.QShortcut(QtGui.QKeySequence(self.shortcuts["session_window"]["enable_resize"]), self)
+        self.enable_resize_key.activated.connect(self.enable_resize)
+
+
+
+
         self.right_rotation_key = QtWidgets.QShortcut(QtGui.QKeySequence(self.shortcuts["session_window"]["rotate_right"]), self)
         self.right_rotation_key.activated.connect(self.rotate_image_right)
 
@@ -2481,6 +2553,9 @@ class SessionDisplay(QWidget, Ui_session_display):
 
         self.grayscale_key = QtWidgets.QShortcut(QtGui.QKeySequence(self.shortcuts["session_window"]["grayscale"]), self)
         self.grayscale_key.activated.connect(self.grayscale)
+
+        self.contrast_key = QtWidgets.QShortcut(QtGui.QKeySequence(self.shortcuts["session_window"]["contrast"]), self)
+        self.contrast_key.activated.connect(self.auto_contrast)
 
         self.grid_settings_key = QtWidgets.QShortcut(QtGui.QKeySequence(self.shortcuts["session_window"]["grid_settings"]), self)
         self.grid_settings_key.activated.connect(self.open_grid_settings_dialog)
@@ -2672,8 +2747,6 @@ class SessionDisplay(QWidget, Ui_session_display):
             self.reset_timer()  # Reset the timer each time a new image is displayed
         self.update_session_info()
 
-
-
     def prepare_image_mods(self, update=True):
         """
         Modifies self.image depending on the values in self.image_mods.
@@ -2728,6 +2801,11 @@ class SessionDisplay(QWidget, Ui_session_display):
                 print(f"Image not found in cache: {file_path}")
                 return
 
+        # Apply auto contrast BEFORE other modifications if level > 0
+        # No longer loop - the function handles fractional levels internally
+        if self.image_mods['contrast_level'] > 0:
+            cvimage = self.apply_auto_contrast(cvimage, self.image_mods['contrast_level'])
+
         # Apply grayscale modification if needed
         if self.image_mods['grayscale']:
             cvimage = cv2.cvtColor(cvimage, cv2.COLOR_BGR2GRAY)
@@ -2744,7 +2822,6 @@ class SessionDisplay(QWidget, Ui_session_display):
             cvimage = self.rotate_image(cvimage, -self.rotation_index)
         else:
             cvimage = self.rotate_image(cvimage, self.rotation_index)
-
 
         # Convert CV image to QImage
         height, width, channels = cvimage.shape
@@ -2809,6 +2886,7 @@ class SessionDisplay(QWidget, Ui_session_display):
             self.apply_grid()
 
 
+
     def open_grid_settings_dialog(self):
         dialog = GridSettingsDialog(self, default_vertical = self.vertical_lines_grid, default_horizontal = self.horizontal_lines_grid)
         view.init_styles(dialog_grid=dialog)
@@ -2842,26 +2920,35 @@ class SessionDisplay(QWidget, Ui_session_display):
             
     def toggle_resize(self):
         if self.toggle_resize_status is not True:
-            # Toggle resize on
+            # Toggle resize off
             self.toggle_resize_status = True
             self.sizePolicy().setHeightForWidth(False)
             self.lock_scale_button.setChecked(True)
-            self.resize_to_image_size(value = -1)
-            print("Resize window: On")
+            self.resize_to_image_size()
+            print("Resize window: Off")
         else:
-            # Toggle resize off
+            # Toggle resize on
             self.toggle_resize_status = False
             self.sizePolicy().setHeightForWidth(True)
             self.lock_scale_button.setChecked(False)
             if self.toggle_resize_status:
                 self.apply_grid()
 
-            print("Resize window: Off")
+            print("Resize window: On")
 
             # Resize the display window once
             self.apply_grid()
 
 
+    def enable_resize(self):
+        # Toggle resize on
+        self.toggle_resize_status = False
+        self.sizePolicy().setHeightForWidth(True)
+        self.lock_scale_button.setChecked(False)
+        if self.toggle_resize_status:
+            self.apply_grid()
+
+        print("Resize window: Off")
 
     def apply_grid(self, grid_opacity=0.6):
         # Calculate the size and position of the displayed image within QLabel
@@ -3076,6 +3163,105 @@ class SessionDisplay(QWidget, Ui_session_display):
         self.display_image(play_sound=False, update_status = False)
 
 
+    def auto_contrast(self):
+        """Increment contrast level and reapply"""
+        # Increment the level by 0.5 each time button is clicked
+        self.image_mods['contrast_level'] += 0.5
+        
+        # Redisplay with updated contrast
+        self.display_image(play_sound=False, update_status=False)
+        print(f"Auto contrast level: {self.image_mods['contrast_level']}")
+
+
+    def apply_auto_contrast(self, cvimage, level=1):
+        """
+        Apply automatic contrast adjustment to an image.
+        Uses adaptive algorithm that analyzes the image first and applies
+        appropriate correction based on its characteristics.
+        
+        Args:
+            cvimage: OpenCV image (BGR format)
+            level: Intensity of effect (can be fractional, e.g., 0.5, 1.0, 1.5)
+        
+        Returns:
+            Contrast-adjusted image
+        """
+        # Work with a copy to avoid modifying the original
+        result = cvimage.copy()
+        
+        # Convert to LAB for analysis
+        lab = cv2.cvtColor(result, cv2.COLOR_BGR2LAB)
+        l_channel, a_channel, b_channel = cv2.split(lab)
+        
+        # Analyze the image to determine if it needs adjustment
+        mean_brightness = np.mean(l_channel)
+        std_brightness = np.std(l_channel)
+        
+        # Calculate histogram to check distribution
+        hist = cv2.calcHist([l_channel], [0], None, [256], [0, 256])
+        hist = hist.flatten() / hist.sum()  # Normalize
+        
+        # Check if image is well-balanced (good distribution across range)
+        # Well-balanced images have:
+        # - Mean brightness around 127 (middle gray)
+        # - Good standard deviation (40-80 range indicates good spread)
+        # - Histogram spread across range
+        is_well_balanced = (
+            100 < mean_brightness < 155 and  # Not too dark or bright
+            std_brightness > 35  # Has good contrast already
+        )
+        
+        # Calculate clipLimit based on level (scales with fractional increments)
+        # Base clipLimit + (level * increment)
+        base_clip = 1.0
+        clip_increment = 0.4  # Each 0.5 level adds 0.2 to clipLimit
+        clip_limit = base_clip + (level * clip_increment)
+        
+        if level <= 1.0:
+            if is_well_balanced:
+                # Image is already balanced, apply very subtle CLAHE
+                clahe = cv2.createCLAHE(clipLimit=min(1.2, clip_limit), tileGridSize=(8, 8))
+                l_channel = clahe.apply(l_channel)
+            elif mean_brightness < 100:
+                # Dark image - brighten more aggressively
+                # Use gamma correction combined with CLAHE
+                gamma_strength = 1.2 + (level * 0.2)  # Scales: 1.3 at level 0.5, 1.4 at level 1.0
+                inv_gamma = 1.0 / gamma_strength
+                table = np.array([((i / 255.0) ** inv_gamma) * 255 
+                                for i in np.arange(0, 256)]).astype("uint8")
+                l_channel = cv2.LUT(l_channel, table)
+                
+                # Then apply moderate CLAHE
+                clahe = cv2.createCLAHE(clipLimit=clip_limit * 1.5, tileGridSize=(8, 8))
+                l_channel = clahe.apply(l_channel)
+            elif mean_brightness > 155:
+                # Bright image - darken slightly and enhance contrast
+                gamma_strength = 0.85 - (level * 0.1)  # Scales: 0.8 at level 0.5, 0.75 at level 1.0
+                inv_gamma = 1.0 / gamma_strength
+                table = np.array([((i / 255.0) ** inv_gamma) * 255 
+                                for i in np.arange(0, 256)]).astype("uint8")
+                l_channel = cv2.LUT(l_channel, table)
+                
+                # Apply mild CLAHE
+                clahe = cv2.createCLAHE(clipLimit=clip_limit * 1.2, tileGridSize=(8, 8))
+                l_channel = clahe.apply(l_channel)
+            else:
+                # Moderate contrast issues - standard CLAHE
+                clahe = cv2.createCLAHE(clipLimit=clip_limit * 1.4, tileGridSize=(8, 8))
+                l_channel = clahe.apply(l_channel)
+        else:
+            # Additional applications: Gentle CLAHE that scales with level
+            clahe = cv2.createCLAHE(clipLimit=clip_limit, tileGridSize=(8, 8))
+            l_channel = clahe.apply(l_channel)
+        
+        # Merge back and convert to BGR
+        lab = cv2.merge([l_channel, a_channel, b_channel])
+        result = cv2.cvtColor(lab, cv2.COLOR_LAB2BGR)
+        
+        return result
+
+
+
     def zoom_plus(self):
         if not self.toggle_resize_status:
             current_scale_index = self.image_mods['scale_index']
@@ -3172,35 +3358,35 @@ class SessionDisplay(QWidget, Ui_session_display):
         Resets the timer for a new image.
         """
         self.image_mods['scale_index'] = self.image_mods['default_scale_index']
+        self.image_mods['contrast_level'] = 0  # Reset contrast for new image
 
         # Check if we are at the last image
         if self.playlist_position < len(self.playlist) - 1:
             self.playlist_position += 1
             self.rotation_index = 0
             self.new_entry = False
-            self.reset_timer()  # Reset the timer for a new image
+            self.reset_timer()
             self.display_image()
             
         else:
-            self.display_end_screen()  # Display black screen when at the end
+            self.display_end_screen()
 
         self.update_session_info()
 
-
-        # If there are any other buttons to untoggle, add them here
 
     def load_prev_image(self):
         """
         Loads the previous image in the playlist or does nothing if at the start.
         """
         self.image_mods['scale_index'] = self.image_mods['default_scale_index']
+        self.image_mods['contrast_level'] = 0  # Reset contrast for new image
 
         # Check if we are at the first image
         if self.playlist_position > 0:
             self.playlist_position -= 1
             self.rotation_index = 0
             self.new_entry = False
-            self.display_image()  # Display the previous image
+            self.display_image()
             
         else:
             return
@@ -3246,12 +3432,11 @@ class SessionDisplay(QWidget, Ui_session_display):
 
         self.grid_button.setChecked(False)
         self.grayscale_button.setChecked(False)
+        # Don't need to uncheck contrast_button since it's not checkable
         self.flip_horizontal_button.setChecked(False)
         self.flip_vertical_button.setChecked(False)
         self.grid_displayed = False
         self.grid_overlay.hide()
-        self.grid_button.setChecked(False)
-
 
     def toggle_resize(self):
         if not self.toggle_resize_status:
@@ -3497,14 +3682,14 @@ class MaxLengthDelegate(QStyledItemDelegate):
         return editor
 
             # Subclass to enable multifolder selection.
-
 class MultiFolderSelector(QtWidgets.QDialog):
     def __init__(self, parent=None, preset_name="", stylesheet=""):
         super(MultiFolderSelector, self).__init__(parent)
         self.setWindowTitle("Select Folders")
+        self.parent_app = parent
 
         self.setMinimumWidth(400)
-        self.setMinimumHeight(300)
+        self.setMinimumHeight(350)  # Increased height to accommodate new checkbox
 
         # Remove the question mark button by setting the window flags
         self.setWindowFlags(self.windowFlags() & ~QtCore.Qt.WindowContextHelpButtonHint)
@@ -3519,11 +3704,23 @@ class MultiFolderSelector(QtWidgets.QDialog):
         self.list_widget = QtWidgets.QListWidget(self)
         layout.addWidget(self.list_widget)
 
-        # Preset Name Input (below the list widget)
+        # Checkbox for append mode
+        self.append_checkbox = QtWidgets.QCheckBox("Add images to existing preset instead of creating new one", self)
+        self.append_checkbox.stateChanged.connect(self.on_append_checkbox_changed)
+        layout.addWidget(self.append_checkbox)
+
+        # Preset Name Input (below the checkbox)
         self.preset_name_edit = QtWidgets.QLineEdit(self)
         self.preset_name_edit.setPlaceholderText("Will be generated when folders are selected")
-        self.preset_name_edit.setText("")  # Start empty like the writing version
+        self.preset_name_edit.setText("")  # Start empty
         layout.addWidget(self.preset_name_edit)
+
+        # Info label for append mode
+        self.info_label = QtWidgets.QLabel("")
+        self.info_label.setStyleSheet("color: #666; font-style: italic;")
+        self.info_label.setWordWrap(True)
+        self.info_label.hide()  # Initially hidden
+        layout.addWidget(self.info_label)
 
         # Buttons
         button_layout = QtWidgets.QHBoxLayout()
@@ -3554,12 +3751,53 @@ class MultiFolderSelector(QtWidgets.QDialog):
         # Apply passed stylesheet
         self.setStyleSheet(stylesheet)
 
-        # Set the default focus to the list widget or any other widget except the preset name edit
-        self.list_widget.setFocus()  # Set focus to the list widget instead of the text input
+        # Set the default focus to the list widget
+        self.list_widget.setFocus()
 
         # Ensure Enter triggers OK button
         self.ok_button.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.init_message_boxes()
+
+        # Check if there's a selected preset to enable append mode
+        self.update_append_availability()
+
+    def update_append_availability(self):
+        """Check if append mode should be available based on selected preset"""
+        if self.parent_app and hasattr(self.parent_app, 'table_images_selection'):
+            selected_row = self.parent_app.table_images_selection.currentRow()
+            if selected_row >= 0:
+                # There's a selected preset, enable append option
+                self.append_checkbox.setEnabled(True)
+                file_item = self.parent_app.table_images_selection.item(selected_row, 1)
+                if file_item:
+                    self.selected_preset_name = file_item.text()
+                else:
+                    self.selected_preset_name = None
+                    self.append_checkbox.setEnabled(False)
+            else:
+                # No preset selected, disable append option
+                self.append_checkbox.setEnabled(False)
+                self.selected_preset_name = None
+        else:
+            # No parent or table available, disable append option
+            self.append_checkbox.setEnabled(False)
+            self.selected_preset_name = None
+
+    def on_append_checkbox_changed(self, state):
+        """Handle checkbox state change"""
+        if state == QtCore.Qt.Checked:
+            # Append mode enabled
+            self.preset_name_edit.setEnabled(False)
+            self.preset_name_edit.clear()
+            if self.selected_preset_name:
+                self.info_label.setText(f"Adding images to '{self.selected_preset_name}'")
+                self.info_label.show()
+        else:
+            # Normal mode
+            self.preset_name_edit.setEnabled(True)
+            self.info_label.hide()
+            # Update preset name based on selected folders if any
+            self.update_preset_name()
 
     def init_message_boxes(self):
         """Initialize custom message box settings."""
@@ -3589,7 +3827,7 @@ class MultiFolderSelector(QtWidgets.QDialog):
         """Generate a unique preset name by adding incremental number if needed"""
         name = base_name
         counter = 1
-        images_presets_dir = self.parent().images_presets_dir  # Assume parent has this attribute
+        images_presets_dir = self.parent_app.images_presets_dir  # Assume parent has this attribute
         while os.path.exists(os.path.join(images_presets_dir, name + ".txt")):
             name = f"{base_name} ({counter})"
             counter += 1
@@ -3597,6 +3835,10 @@ class MultiFolderSelector(QtWidgets.QDialog):
 
     def update_preset_name(self):
         """Update the preset name based on selected folders"""
+        if self.append_checkbox.isChecked():
+            # In append mode, don't update preset name
+            return
+            
         if not self.selected_folders:
             self.preset_name_edit.setText("")
             return
@@ -3655,7 +3897,7 @@ class MultiFolderSelector(QtWidgets.QDialog):
                     formatted_path = self.format_folder_path(folder)
                     self.list_widget.addItem(formatted_path)
             
-            # Update the preset name after adding folders
+            # Update the preset name after adding folders (only if not in append mode)
             self.update_preset_name()
 
     def remove_folder(self):
@@ -3679,14 +3921,21 @@ class MultiFolderSelector(QtWidgets.QDialog):
                 # Remove the item from the list widget
                 self.list_widget.takeItem(self.list_widget.row(item))
         
-        # Update the preset name after removing folders
+        # Update the preset name after removing folders (only if not in append mode)
         self.update_preset_name()
 
     def get_selected_folders(self):
         return self.selected_folders
 
     def get_preset_name(self):
+        if self.append_checkbox.isChecked():
+            # Return the selected preset name when in append mode
+            return self.selected_preset_name
         return self.preset_name_edit.text()
+
+    def get_append_mode(self):
+        """Return whether append mode is enabled"""
+        return self.append_checkbox.isChecked()
 
     def keyPressEvent(self, event):
         if event.key() == QtCore.Qt.Key_Return or event.key() == QtCore.Qt.Key_Enter:
@@ -3697,10 +3946,15 @@ class MultiFolderSelector(QtWidgets.QDialog):
 
     def accept(self):
         """Accept the dialog and check for existing presets before processing."""
+        if self.append_checkbox.isChecked():
+            # In append mode, just proceed
+            super(MultiFolderSelector, self).accept()
+            return
+
         preset_name = self.get_preset_name().strip()
 
         # Check if the preset name already exists
-        images_presets_dir = self.parent().images_presets_dir  # Assume parent has this attribute
+        images_presets_dir = self.parent_app.images_presets_dir  # Assume parent has this attribute
         preset_filename = f'{preset_name}.txt'
         preset_filepath = os.path.join(images_presets_dir, preset_filename)
 
@@ -3709,7 +3963,6 @@ class MultiFolderSelector(QtWidgets.QDialog):
             return  # Do not accept the dialog
 
         super(MultiFolderSelector, self).accept()
-
 
 
 
