@@ -2186,7 +2186,7 @@ class SessionDisplay(QWidget, Ui_session_display):
 
         # Connect the resize event to update the border overlay
         self.resizeEvent = self.update_border_overlay_geometry
-        self.setMinimumSize(QtCore.QSize(640, 1))
+        self.setMinimumSize(QtCore.QSize(700, 1))
 
         # Other initialization logic
         self.old_position = None  # Initialize old_position for dragging
