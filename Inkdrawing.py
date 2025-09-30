@@ -6,6 +6,7 @@ import random
 import shutil
 import json  
 import datetime 
+import time
 
 from send2trash import send2trash
 from pathlib import Path
@@ -2701,14 +2702,19 @@ class SessionDisplay(QWidget, Ui_session_display):
 
 
     def display_image(self, play_sound=True, update_status=True):
-        # Check if the QLabel `session_info` is still valid
+        # Reset abort flag at the start of new load
+        self._abort_current_load = False
+        
+        # Check if session_info is still valid
         if not hasattr(self, 'session_info') or sip.isdeleted(self.session_info):
-            return  # Exit if session_info doesn't exist or has been deleted
-
-        # Existing code to update `session_info`...
-
+            return
+        
         if self.playlist_position >= len(self.playlist):
             self.display_end_screen()
+            return
+        
+        # Check abort before expensive operations
+        if self._abort_current_load:
             return
 
         # Sounds
@@ -2716,53 +2722,54 @@ class SessionDisplay(QWidget, Ui_session_display):
             mixer.music.load(self.sounds_dir + "\\new_entry.mp3")
             if play_sound:
                 mixer.music.play()
-            # self.new_entry = False
-        elif self.entry['amount of items'] == 0:  # Last image in entry
+        elif self.entry['amount of items'] == 0:
             mixer.music.load(self.sounds_dir + "\\last_entry_image.mp3")
             if play_sound:
-
                 mixer.music.play()
         elif self.entry['time'] > 10:
             mixer.music.load(self.sounds_dir + "\\new_image.mp3")
             if play_sound:
                 mixer.music.play()
 
-        if self.playlist_position > len(self.playlist):  # Last image
+        if self.playlist_position > len(self.playlist):
             self.timer.stop()
             self.timer_display.setText(f'Done!')
             return
         else:
-
-
-
             self.session_info.setText(
-                
                 f'{int(self.schedule[self.entry["current"]][1]) - self.entry["amount of items"]}'
                 f'/{int(self.schedule[self.entry["current"]][1])}')
-
-
-
-            self.prepare_image_mods(update = update_status)
+            
+            # Check abort before image processing
+            if self._abort_current_load:
+                return
+                
+            self.prepare_image_mods(update=update_status)
+            
         if update_status:
-            self.reset_timer()  # Reset the timer each time a new image is displayed
+            self.reset_timer()
         self.update_session_info()
+
+
 
     def prepare_image_mods(self, update=True):
         """
         Modifies self.image depending on the values in self.image_mods.
-        If update=True, loads and caches the image.
-        If update=False, retrieves the image from cache.
         """
+        # Check abort early
+        if hasattr(self, '_abort_current_load') and self._abort_current_load:
+            return
+            
         file_path = Path(self.playlist[self.playlist_position])
-
-        # Supported image formats
         valid_extensions = {'.jpg', '.jpeg', '.png', '.webp', '.tiff', '.jfif', '.bmp'}
-        
-        # Extract file extension and check if it's valid
         file_extension = file_path.suffix.lower()
 
         if update:
             if file_extension in valid_extensions:
+                # Check abort before expensive file operations
+                if self._abort_current_load:
+                    return
+                    
                 try:
                     # Convert image to CV format
                     cvimage = self.convert_to_cvimage() if file_extension == '.jpg' else cv2.imread(str(file_path))
@@ -2780,6 +2787,10 @@ class SessionDisplay(QWidget, Ui_session_display):
                     self.setWindowTitle('Error processing image')
                     return
 
+                # Check abort after loading but before downscaling
+                if self._abort_current_load:
+                    return
+                
                 # Downscale the image to default_width if necessary
                 default_width = self.image_mods['default_width']
                 if width > default_width:
@@ -2798,11 +2809,14 @@ class SessionDisplay(QWidget, Ui_session_display):
             # Retrieve the cached image
             cvimage = self.scaled_images_cache
             if cvimage is None:
-                print(f"Image not found in cache: {file_path}")
+                print(f"Image not found in cache")
                 return
+        
+        # Check abort before transformations
+        if self._abort_current_load:
+            return
 
         # Apply auto contrast BEFORE other modifications if level > 0
-        # No longer loop - the function handles fractional levels internally
         if self.image_mods['contrast_level'] > 0:
             cvimage = self.apply_auto_contrast(cvimage, self.image_mods['contrast_level'])
 
@@ -2884,6 +2898,9 @@ class SessionDisplay(QWidget, Ui_session_display):
 
         if self.grid_displayed:
             self.apply_grid()
+
+
+
 
 
 
@@ -3357,6 +3374,14 @@ class SessionDisplay(QWidget, Ui_session_display):
         Loads the next image in the playlist or displays a black screen if at the end.
         Resets the timer for a new image.
         """
+
+        if hasattr(self, '_last_load_time'):
+            elapsed = time.time() - self._last_load_time
+            if elapsed < 0.15:  # 150ms minimum between loads
+                return
+        self._last_load_time = time.time()
+
+        self._abort_current_load = True  # Cancel previous load
         self.image_mods['scale_index'] = self.image_mods['default_scale_index']
         self.image_mods['contrast_level'] = 0  # Reset contrast for new image
 
@@ -3378,6 +3403,16 @@ class SessionDisplay(QWidget, Ui_session_display):
         """
         Loads the previous image in the playlist or does nothing if at the start.
         """
+
+        if hasattr(self, '_last_load_time'):
+            elapsed = time.time() - self._last_load_time
+            if elapsed < 0.15:  # 150ms minimum between loads
+                return
+        self._last_load_time = time.time()
+
+
+        self._abort_current_load = True  # Cancel previous load
+
         self.image_mods['scale_index'] = self.image_mods['default_scale_index']
         self.image_mods['contrast_level'] = 0  # Reset contrast for new image
 
