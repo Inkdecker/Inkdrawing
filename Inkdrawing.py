@@ -2660,6 +2660,9 @@ class SessionDisplay(QWidget, Ui_session_display):
     def eventFilter(self, source, event):
         if source is self and event.type() == QtCore.QEvent.Resize:
             
+            # Check if image exists before trying to scale it
+            if not hasattr(self, 'image') or self.image is None:
+                return super(SessionDisplay, self).eventFilter(source, event)
             
             if self.toggle_resize_status:
                 self.image_display.setPixmap(
@@ -2667,16 +2670,12 @@ class SessionDisplay(QWidget, Ui_session_display):
                         self.size(),
                         aspectRatioMode=QtCore.Qt.KeepAspectRatio,
                         transformMode=QtCore.Qt.SmoothTransformation))
-
-
             else:
                 self.image_display.setPixmap(
                     self.image.scaled(
                         self.image_display.size(),
                         aspectRatioMode=QtCore.Qt.KeepAspectRatio,
                         transformMode=QtCore.Qt.SmoothTransformation))
-
-
 
         return super(SessionDisplay, self).eventFilter(source, event)
 
@@ -2771,8 +2770,10 @@ class SessionDisplay(QWidget, Ui_session_display):
                     return
                     
                 try:
-                    # Convert image to CV format
-                    cvimage = self.convert_to_cvimage() if file_extension == '.jpg' else cv2.imread(str(file_path))
+                    # Unicode-safe image loading for ALL file types
+                    with open(str(file_path), 'rb') as f:
+                        file_bytes = np.frombuffer(f.read(), np.uint8)
+                    cvimage = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
 
                     # Check if the image was loaded correctly
                     if cvimage is None:
@@ -3130,22 +3131,22 @@ class SessionDisplay(QWidget, Ui_session_display):
             self.border_overlay.hide()
 
 
+
     def convert_to_cvimage(self):
+        """Convert image file to OpenCV format, handling Unicode paths."""
         file_path = self.playlist[self.playlist_position]
         try:
-            file = QtCore.QFile(file_path)
-            if not file.open(QtCore.QFile.ReadOnly):
-                raise FileNotFoundError(f"Unable to open file: {file_path}")
-            
-            ba = file.readAll()
-            ba = ba.data()
-            ba = np.frombuffer(ba, np.uint8)  # Use frombuffer for better handling
-            file.close()
+            # Method 1: Using numpy to read the file with Unicode support
+            # Read image as bytes array
+            with open(file_path, 'rb') as f:
+                file_bytes = np.frombuffer(f.read(), np.uint8)
             
             # Decode the image using OpenCV
-            cvimage = cv2.imdecode(ba, cv2.IMREAD_COLOR)  # Use cv2.IMREAD_COLOR for color images
+            cvimage = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+            
             if cvimage is None:
                 raise ValueError(f"Failed to decode image from file: {file_path}")
+            
             return cvimage
         
         except Exception as e:
