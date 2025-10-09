@@ -57,6 +57,11 @@
 
 
         "QCheckBox": "color: rgb(255, 255, 255);",
+        "QRadioButton": "color: rgb(220, 220, 220);",
+        "QRadioButton::indicator": "width: 13px; height: 13px;",
+        "QRadioButton::indicator:unchecked": "border: 2px solid rgb(100, 100, 100); border-radius: 7px; background: rgb(40, 40, 40);",
+        "QRadioButton::indicator:checked": "border: 2px solid rgb(150, 150, 150); border-radius: 7px; background: qradialgradient(cx:0.5, cy:0.5, radius:1, fx:0.5, fy:0.5, stop:0 rgb(255, 255, 255), stop:0.3 rgb(255, 255, 255), stop:0.31 transparent);",
+        
         "QComboBox": "background: rgb(40, 40, 40); color: rgb(220, 220, 220); border: 1px solid rgb(80, 80, 80);",
 
         "QComboBox QAbstractItemView": "background: rgb(40, 40, 40); color: rgb(220, 220, 220);",

@@ -1154,33 +1154,55 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
             self.show_info_message('Warning', f'File "{file_name}" does not exist.')
 
 
-
     def update_preset(self, preset_path=None, is_gui=True):
         """
-        Updates the selected preset or a specified preset path.
+        Updates the selected preset or all presets based on user choice.
         For command-line usage, preset_path is used directly, and is_gui is set to False.
         """
-        # Use the provided preset_path or select one from the UI
-        if preset_path:
-            preset_file_path = preset_path
-        else:
+        
+        if is_gui:
+            # Show dialog to choose between updating current or all presets
             selected_row = self.table_images_selection.currentRow()
+            
             if selected_row == -1:
-                if is_gui:
-                    self.show_info_message('Warning', 'No preset selected for update.')
-                else:
-                    print('Warning: No preset selected for update.')
+                self.show_info_message('Warning', 'No preset selected for update.')
                 return
+                
             file_item = self.table_images_selection.item(selected_row, 1)
             if not file_item:
-                if is_gui:
-                    self.show_info_message('Warning', 'No file associated with the selected preset.')
-                else:
-                    print('Warning: No file associated with the selected preset.')
+                self.show_info_message('Warning', 'No file associated with the selected preset.')
                 return
+                
             preset_name = file_item.text()
-            preset_file_path = os.path.join(self.images_presets_dir, f"{preset_name}.txt")
+            
+            # Open the dialog
+            dialog = UpdatePresetDialog(self, current_preset_name=preset_name)
+            self.init_styles(dialog=dialog)
+            
+            if dialog.exec_() != QtWidgets.QDialog.Accepted:
+                return  # User cancelled
+                
+            choice = dialog.get_choice()
+            
+            if choice == 'current':
+                # Update only the current preset
+                preset_file_path = os.path.join(self.images_presets_dir, f"{preset_name}.txt")
+                self._update_single_preset(preset_file_path, is_gui=True)
+                
+            elif choice == 'all':
+                # Update all presets
+                self._update_all_presets(is_gui=True)
+        else:
+            # Command-line usage - update single preset
+            if not preset_path:
+                print('Error: No preset path provided for command-line update.')
+                return
+            self._update_single_preset(preset_path, is_gui=False)
 
+
+    def _update_single_preset(self, preset_file_path, is_gui=True):
+        """Helper method to update a single preset file."""
+        
         if not os.path.exists(preset_file_path):
             if is_gui:
                 self.show_info_message('Error', f'Preset file "{preset_file_path}" does not exist.')
@@ -1202,6 +1224,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
         # Collect image files from unique directories
         unique_directories = {os.path.dirname(path) for path in filepaths if os.path.exists(os.path.dirname(path))}
         updated_filepaths = set()
+        
         for directory in unique_directories:
             try:
                 for file in os.listdir(directory):
@@ -1221,7 +1244,8 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
                     f.write(path + '\n')
 
             if is_gui:
-                self.show_info_message('Success', f'Preset "{os.path.basename(preset_file_path)}" updated with {len(updated_filepaths)} images.')
+                self.show_info_message('Success', 
+                    f'Preset "{os.path.basename(preset_file_path)}" updated with {len(updated_filepaths)} images.')
             else:
                 print(f'Preset "{os.path.basename(preset_file_path)}" updated with {len(updated_filepaths)} images.')
         except Exception as e:
@@ -1230,10 +1254,86 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
             else:
                 print(f'Error: Failed to update preset file. Error: {str(e)}')
 
-        # Reload presets
+        # Reload presets if in GUI mode
         if is_gui:
             self.load_presets()
 
+
+    def _update_all_presets(self, is_gui=True):
+        """Helper method to update all preset files."""
+        
+        try:
+            preset_files = [f for f in os.listdir(self.images_presets_dir) if f.endswith('.txt')]
+        except Exception as e:
+            if is_gui:
+                self.show_info_message('Error', f"Failed to read presets directory. Error: {str(e)}")
+            else:
+                print(f'Error: Failed to read presets directory. Error: {str(e)}')
+            return
+        
+        if not preset_files:
+            if is_gui:
+                self.show_info_message('Info', 'No presets found to update.')
+            else:
+                print('Info: No presets found to update.')
+            return
+        
+        # Track statistics
+        successful_updates = 0
+        failed_updates = 0
+        total_images = 0
+        
+        for preset_file in preset_files:
+            preset_path = os.path.join(self.images_presets_dir, preset_file)
+            
+            try:
+                # Read existing file paths
+                with open(preset_path, 'r', encoding='utf-8') as f:
+                    filepaths = [line.strip() for line in f if line.strip()]
+                
+                # Collect image files from unique directories
+                unique_directories = {os.path.dirname(path) for path in filepaths 
+                                    if os.path.exists(os.path.dirname(path))}
+                updated_filepaths = set()
+                
+                for directory in unique_directories:
+                    try:
+                        for file in os.listdir(directory):
+                            file_path = os.path.join(directory, file)
+                            if os.path.isfile(file_path) and os.path.splitext(file_path)[1].lower() in self.valid_extensions:
+                                updated_filepaths.add(file_path)
+                    except PermissionError:
+                        continue
+                
+                # Write updated file paths back to the preset
+                with open(preset_path, 'w', encoding='utf-8') as f:
+                    for path in sorted(updated_filepaths):
+                        f.write(path + '\n')
+                
+                successful_updates += 1
+                total_images += len(updated_filepaths)
+                
+                if not is_gui:
+                    print(f'Updated: {preset_file} ({len(updated_filepaths)} images)')
+                    
+            except Exception as e:
+                failed_updates += 1
+                if not is_gui:
+                    print(f'Failed to update {preset_file}: {str(e)}')
+        
+        # Show summary
+        summary_message = (
+            f"Update Complete:\n"
+            f"Successfully updated: {successful_updates} preset(s)\n"
+            f"Failed: {failed_updates} preset(s)\n"
+            f"Total images: {total_images}"
+        )
+        
+        if is_gui:
+            self.show_info_message('Update Complete', summary_message)
+            self.load_presets()
+        else:
+            print(summary_message)
 
 
     def create_rainmeter_preset(self):
@@ -4001,7 +4101,80 @@ class MultiFolderSelector(QtWidgets.QDialog):
         super(MultiFolderSelector, self).accept()
 
 
+class UpdatePresetDialog(QtWidgets.QDialog):
+    """Dialog for choosing between updating current preset or all presets."""
+    
+    def __init__(self, parent=None, current_preset_name=None):
+        super().__init__(parent)
+        self.setWindowTitle("Update Preset Options")
+        self.setMinimumWidth(350)
+        self.setMinimumHeight(150)
+        
+        # Remove the question mark button
+        self.setWindowFlags(self.windowFlags() & ~QtCore.Qt.WindowContextHelpButtonHint)
+        
+        self.current_preset_name = current_preset_name
+        self.update_choice = None  # Will be 'current', 'all', or None
+        
+        self.setup_ui()
+        
+    def setup_ui(self):
+        layout = QtWidgets.QVBoxLayout(self)
+        
+        # Title label
+        title_label = QtWidgets.QLabel("Choose update option:")
+        title_label.setStyleSheet("font-weight: bold; font-size: 11pt;")
+        layout.addWidget(title_label)
+        
+        # Add spacing
+        layout.addSpacing(10)
+        
+        # Radio buttons
+        self.radio_current = QtWidgets.QRadioButton(
+            f"Update current preset: '{self.current_preset_name}'"
+        )
+        self.radio_all = QtWidgets.QRadioButton("Update all presets")
+        
+        # Set current as default
+        self.radio_current.setChecked(True)
+        
+        layout.addWidget(self.radio_current)
+        layout.addWidget(self.radio_all)
+        
+        # Add spacing
+        layout.addSpacing(15)
+        
+        # Buttons
+        button_layout = QtWidgets.QHBoxLayout()
+        
+        self.ok_button = QtWidgets.QPushButton("Update")
+        self.cancel_button = QtWidgets.QPushButton("Cancel")
+        
+        self.ok_button.clicked.connect(self.accept)
+        self.cancel_button.clicked.connect(self.reject)
+        
+        self.ok_button.setAutoDefault(True)
+        self.cancel_button.setAutoDefault(False)
+        
+        button_layout.addStretch()
+        button_layout.addWidget(self.ok_button)
+        button_layout.addWidget(self.cancel_button)
+        
+        layout.addLayout(button_layout)
+        
+    def accept(self):
+        """Store the user's choice and accept the dialog."""
+        if self.radio_current.isChecked():
+            self.update_choice = 'current'
+        else:
+            self.update_choice = 'all'
+        super().accept()
+        
+    def get_choice(self):
+        """Return the user's choice."""
+        return self.update_choice
 
+        
 
 # Custom QTableWidget that enforces at least one selected row
 class EnforcedSelectionTable(QTableWidget):

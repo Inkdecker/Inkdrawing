@@ -43,6 +43,10 @@
         "QPushButton": "background: rgb(180, 180, 180); color: black;",
         "QPushButton:disabled": "background: rgb(220, 220, 220); color: gray;",
 
+        "QRadioButton": "color: black;",
+        "QRadioButton::indicator": "width: 13px; height: 13px;",
+        "QRadioButton::indicator:unchecked": "border: 2px solid rgb(160, 160, 160); border-radius: 7px; background: rgb(240, 240, 240);",
+        "QRadioButton::indicator:checked": "border: 2px solid rgb(100, 100, 100); border-radius: 7px; background: qradialgradient(cx:0.5, cy:0.5, radius:1, fx:0.5, fy:0.5, stop:0 rgb(60, 60, 60), stop:0.3 rgb(60, 60, 60), stop:0.31 transparent);",
 
         "QListView, QTreeView": "background: rgb(230, 230, 230); color: black;border:none;",
         "QListView::item:hover, QTreeView::item:hover": "background: rgb(180, 180, 180); color: rgb(40, 40, 40);",
