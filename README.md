@@ -34,6 +34,7 @@ This is a free tool to users can use to practice drawing using references from t
 	
 	- (New) 29.09.2025: Add images to current preset.
 	- (New) 29.09.2025: Auto contrast.
+	- (New) 09.10.2025: Update all presets option.
 
 ##### Supported files :  .jpg, .jpeg, .png, .webp, .tiff, .jfif, .bmp
 
