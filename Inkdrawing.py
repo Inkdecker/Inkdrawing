@@ -464,7 +464,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
             return
         
         # Store these values before potentially modifying state
-        was_editing = self.currently_editing
+        
         original_text = self.original_text
         
         # Reset editing state BEFORE making changes
@@ -765,6 +765,18 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
         return super().eventFilter(obj, event)
 
 
+
+    def sanitize_filename(self, name):
+        """Remove or replace characters invalid in Windows filenames."""
+        invalid_chars = '<>:"/\\|?*'
+        for ch in invalid_chars:
+            name = name.replace(ch, '_')
+        # Remove trailing dots and spaces
+        name = name.rstrip(' .')
+        return name.strip()
+
+
+
     ######### PRESET SECTION ######### 
     def create_preset(self, folder_list=None, preset_name=None, output_folder=None, is_gui=True, append_to_existing=False):
         """
@@ -829,6 +841,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
         os.makedirs(target_folder, exist_ok=True)
         
         # Write valid file paths to the preset file
+        preset_name = self.sanitize_filename(preset_name)
         preset_filename = os.path.join(target_folder, f'{preset_name}.txt')
         
         if append_to_existing and os.path.exists(preset_filename):
@@ -2756,7 +2769,6 @@ class SessionDisplay(QWidget, Ui_session_display):
         if event.button() == QtCore.Qt.LeftButton:
             self.old_position = None
 
-    # region Session processing functions
     def eventFilter(self, source, event):
         if source is self and event.type() == QtCore.QEvent.Resize:
             
