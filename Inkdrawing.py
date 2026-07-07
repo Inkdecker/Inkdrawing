@@ -75,6 +75,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
                 "pause_timer": "Space",
                 "close": "Escape",
                 "next_image": "Right",
+                "crop": "C",
                 "open_folder": "O",
                 "copy_path": "Ctrl+C",
                 "delete_image": "Ctrl+D",
@@ -2010,7 +2011,21 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
                     
                     # Merge with default settings
                     for key in default_settings:
-                        if key in loaded_settings:
+                        if key not in loaded_settings:
+                            continue
+
+                        if key == "shortcuts" and isinstance(loaded_settings[key], dict):
+                            # Deep-merge each shortcut category so newly-added
+                            # shortcuts (like "crop") aren't lost just because
+                            # an older settings file on disk doesn't have them.
+                            merged_shortcuts = default_settings["shortcuts"]
+                            for category, default_keys in merged_shortcuts.items():
+                                loaded_category = loaded_settings[key].get(category, {})
+                                merged_category = dict(default_keys)
+                                merged_category.update(loaded_category)
+                                merged_shortcuts[category] = merged_category
+                            default_settings["shortcuts"] = merged_shortcuts
+                        else:
                             default_settings[key] = loaded_settings[key]
         except Exception as e:
             print(f"Error loading session settings: {str(e)}")
@@ -2305,6 +2320,11 @@ class SessionDisplay(QWidget, Ui_session_display):
         # Other initialization logic
         self.old_position = None  # Initialize old_position for dragging
 
+        # Crop tool state
+        self.crop_mode = False
+        self.crop_rubber_band = None
+        self.crop_start_pos = None
+
 
 
 
@@ -2433,7 +2453,8 @@ class SessionDisplay(QWidget, Ui_session_display):
              1.6, 1.7, 1.8, 1.9, 2, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 3],
             'default_scale_index':7,
             'default_width': 900,
-            'scale_index' : 7}
+            'scale_index' : 7,
+            'crop': None}  # (x, y, w, h) in post-flip/rotate cvimage space, or None
 
 
     def pixmap_to_numpy(self, pixmap):
@@ -2506,10 +2527,12 @@ class SessionDisplay(QWidget, Ui_session_display):
 
     def rotate_image_right(self):
             self.rotation_index -= self.rotation_factor  # Clockwise
+            self.image_mods['crop'] = None  # Crop no longer lines up after rotating
             self.display_image(play_sound=False, update_status = False)
 
     def rotate_image_left(self):
             self.rotation_index += self.rotation_factor  # Clockwise
+            self.image_mods['crop'] = None  # Crop no longer lines up after rotating
             self.display_image(play_sound=False, update_status = False)
 
 
@@ -2677,6 +2700,9 @@ class SessionDisplay(QWidget, Ui_session_display):
         self.grid_key = QtWidgets.QShortcut(QtGui.QKeySequence(self.shortcuts["session_window"]["toggle_grid"]), self)
         self.grid_key.activated.connect(self.toggle_grid)
 
+        self.crop_key = QtWidgets.QShortcut(QtGui.QKeySequence(self.shortcuts["session_window"]["crop"]), self)
+        self.crop_key.activated.connect(self.toggle_crop_mode)
+
         self.zoom_in_key = QtWidgets.QShortcut(QtGui.QKeySequence(self.shortcuts["session_window"]["zoom_in"]), self)
         self.zoom_in_key.activated.connect(self.zoom_minus)
 
@@ -2753,19 +2779,47 @@ class SessionDisplay(QWidget, Ui_session_display):
 
 
     def mousePressEvent(self, event):
-        """Capture the mouse press event to initiate dragging."""
+        """Capture the mouse press event to initiate dragging (or crop selection)."""
+        if self.crop_mode:
+            if event.button() == QtCore.Qt.LeftButton:
+                self.crop_start_pos = event.pos()
+                if self.crop_rubber_band is None:
+                    self.crop_rubber_band = QtWidgets.QRubberBand(QtWidgets.QRubberBand.Rectangle, self)
+                self.crop_rubber_band.setGeometry(QtCore.QRect(self.crop_start_pos, QtCore.QSize()))
+                self.crop_rubber_band.show()
+            elif event.button() == QtCore.Qt.RightButton:
+                # Right-click cancels crop mode without applying anything
+                self.cancel_crop_mode()
+            return
+
         if event.button() == QtCore.Qt.LeftButton:
             self.old_position = event.globalPos()
 
     def mouseMoveEvent(self, event):
-        """Handle the mouse movement for dragging the window."""
+        """Handle the mouse movement for dragging the window (or crop selection)."""
+        if self.crop_mode:
+            if event.buttons() == QtCore.Qt.LeftButton and self.crop_start_pos is not None:
+                self.crop_rubber_band.setGeometry(
+                    QtCore.QRect(self.crop_start_pos, event.pos()).normalized()
+                )
+            return
+
         if event.buttons() == QtCore.Qt.LeftButton and self.old_position:
             delta = event.globalPos() - self.old_position
             self.move(self.x() + delta.x(), self.y() + delta.y())
             self.old_position = event.globalPos()
 
     def mouseReleaseEvent(self, event):
-        """Reset the dragging state after the mouse button is released."""
+        """Reset the dragging state after the mouse button is released (or finish crop selection)."""
+        if self.crop_mode:
+            if event.button() == QtCore.Qt.LeftButton and self.crop_start_pos is not None:
+                selection_rect = QtCore.QRect(self.crop_start_pos, event.pos()).normalized()
+                self.crop_start_pos = None
+                if self.crop_rubber_band is not None:
+                    self.crop_rubber_band.hide()
+                self.finish_crop_mode(selection_rect)
+            return
+
         if event.button() == QtCore.Qt.LeftButton:
             self.old_position = None
 
@@ -2800,6 +2854,137 @@ class SessionDisplay(QWidget, Ui_session_display):
             self.mute = True
             self.volume = mixer.music.get_volume()
             mixer.music.set_volume(0.0)
+
+    def toggle_crop_mode(self):
+        """Enter or leave crop-selection mode."""
+        if not hasattr(self, 'image') or self.image is None:
+            return
+
+        if self.crop_mode:
+            self.cancel_crop_mode()
+            return
+
+        self.crop_mode = True
+        self.crop_start_pos = None
+        self.setCursor(QtCore.Qt.CrossCursor)
+        print("Crop mode: On (drag a rectangle, right-click to cancel)")
+
+    def cancel_crop_mode(self):
+        """Leave crop-selection mode without changing the crop."""
+        self.crop_mode = False
+        self.crop_start_pos = None
+        if self.crop_rubber_band is not None:
+            self.crop_rubber_band.hide()
+        self.unsetCursor()
+        print("Crop mode: Off")
+
+    def clear_crop(self):
+        """Remove any active crop and redisplay the full image."""
+        if self.image_mods.get('crop') is not None:
+            self.image_mods['crop'] = None
+            self.display_image(play_sound=False, update_status=False)
+
+    def get_displayed_image_geometry(self):
+        """
+        Returns (offset_x, offset_y, displayed_width, displayed_height) describing
+        where the currently shown pixmap sits within this widget's own coordinate
+        space, accounting for letterboxing from KeepAspectRatio scaling.
+        Mirrors the geometry maths used by apply_grid().
+        """
+        pixmap = self.image_display.pixmap()
+        if pixmap is None or pixmap.isNull():
+            return None
+
+        pixmap_size = pixmap.size()
+
+        if self.toggle_resize_status:
+            label_size = self.size()
+        else:
+            label_size = self.image_display.size()
+
+        if pixmap_size.height() == 0 or label_size.height() == 0:
+            return None
+
+        pixmap_aspect_ratio = pixmap_size.width() / pixmap_size.height()
+        label_aspect_ratio = label_size.width() / label_size.height()
+
+        if pixmap_aspect_ratio > label_aspect_ratio:
+            displayed_width = label_size.width()
+            displayed_height = displayed_width / pixmap_aspect_ratio
+        else:
+            displayed_height = label_size.height()
+            displayed_width = displayed_height * pixmap_aspect_ratio
+
+        offset_x = round((label_size.width() - displayed_width) / 2)
+        offset_y = round((label_size.height() - displayed_height) / 2)
+
+        abs_offset_x = self.image_display.x() + offset_x
+        abs_offset_y = self.image_display.y() + offset_y
+
+        return abs_offset_x, abs_offset_y, displayed_width, displayed_height
+
+    def finish_crop_mode(self, selection_rect):
+        """
+        Converts the on-screen selection rectangle (in this widget's coordinates)
+        into image-pixel coordinates and stores it as the active crop.
+        """
+        self.crop_mode = False
+        self.unsetCursor()
+
+        geometry = self.get_displayed_image_geometry()
+        if geometry is None or self.image is None:
+            return
+
+        abs_offset_x, abs_offset_y, displayed_width, displayed_height = geometry
+        if displayed_width <= 0 or displayed_height <= 0:
+            return
+
+        # Ignore accidental clicks/tiny drags
+        if selection_rect.width() < 5 or selection_rect.height() < 5:
+            print("Crop selection too small, ignored.")
+            return
+
+        # Position of the selection relative to the displayed image only
+        rel_x = selection_rect.x() - abs_offset_x
+        rel_y = selection_rect.y() - abs_offset_y
+        rel_w = selection_rect.width()
+        rel_h = selection_rect.height()
+
+        # Scale from on-screen displayed size back to self.image's native pixel size
+        # (self.image is 1:1 with the post-flip/rotate cvimage, pre-zoom)
+        scale_ratio = self.image.width() / displayed_width
+
+        img_x = rel_x * scale_ratio
+        img_y = rel_y * scale_ratio
+        img_w = rel_w * scale_ratio
+        img_h = rel_h * scale_ratio
+
+        native_w = self.image.width()
+        native_h = self.image.height()
+
+        # Clamp to image bounds
+        img_x = max(0, min(img_x, native_w - 1))
+        img_y = max(0, min(img_y, native_h - 1))
+        img_w = max(1, min(img_w, native_w - img_x))
+        img_h = max(1, min(img_h, native_h - img_y))
+
+        # If a crop is already active, self.image is the *previously cropped*
+        # pixmap, so the coordinates above are relative to that crop, not the
+        # full canvas. Add the existing crop's offset to keep everything
+        # anchored to the same full-canvas space that image_mods['crop'] uses.
+        existing_crop = self.image_mods.get('crop')
+        base_x = existing_crop[0] if existing_crop is not None else 0
+        base_y = existing_crop[1] if existing_crop is not None else 0
+
+        self.image_mods['crop'] = (
+            int(img_x) + base_x,
+            int(img_y) + base_y,
+            int(img_w),
+            int(img_h)
+        )
+
+        self.display_image(play_sound=False, update_status=False)
+        print(f"Crop applied: {self.image_mods['crop']}")
 
 
 
@@ -2949,6 +3134,19 @@ class SessionDisplay(QWidget, Ui_session_display):
             cvimage = self.rotate_image(cvimage, -self.rotation_index)
         else:
             cvimage = self.rotate_image(cvimage, self.rotation_index)
+
+        # Apply visual crop if one is active (does not touch the file on disk)
+        crop = self.image_mods.get('crop')
+        if crop is not None:
+            crop_x, crop_y, crop_w, crop_h = crop
+            img_h, img_w = cvimage.shape[:2]
+            # Clamp again in case orientation/size changed since the crop was made
+            crop_x = max(0, min(crop_x, img_w - 1))
+            crop_y = max(0, min(crop_y, img_h - 1))
+            crop_w = max(1, min(crop_w, img_w - crop_x))
+            crop_h = max(1, min(crop_h, img_h - crop_y))
+            cvimage = cvimage[crop_y:crop_y + crop_h, crop_x:crop_x + crop_w]
+            cvimage = np.ascontiguousarray(cvimage)
 
         # Convert CV image to QImage
         height, width, channels = cvimage.shape
@@ -3272,6 +3470,7 @@ class SessionDisplay(QWidget, Ui_session_display):
         else:
             self.image_mods['hflip'] = True
             self.flip_horizontal_button.setChecked(True)
+        self.mirror_crop_horizontal()
         self.display_image(play_sound=False, update_status = False)
 
     def flip_vertical(self):
@@ -3281,7 +3480,43 @@ class SessionDisplay(QWidget, Ui_session_display):
         else:
             self.image_mods['vflip'] = True
             self.flip_vertical_button.setChecked(True)
+        self.mirror_crop_vertical()
         self.display_image(play_sound=False, update_status = False)
+
+    def mirror_crop_horizontal(self):
+        """
+        Keeps the crop lined up after a horizontal flip. A pure left-right
+        mirror of the crop rect is exact here because rotate_image_right/left
+        already negate the rotation angle when hflip is on, so mirroring the
+        final image is equivalent to mirroring the pre-rotation one.
+        """
+        crop = self.image_mods.get('crop')
+        if crop is None or self.scaled_images_cache is None:
+            return
+        x, y, w, h = crop
+        full_h, full_w = self.scaled_images_cache.shape[:2]
+        new_x = full_w - (x + w)
+        self.image_mods['crop'] = (new_x, y, w, h)
+
+    def mirror_crop_vertical(self):
+        """
+        Keeps the crop lined up after a vertical flip, but only when the
+        image isn't rotated. Unlike hflip, vflip has no matching angle
+        compensation, so a simple top-bottom mirror is only exact at
+        rotation_index == 0; otherwise the crop is cleared to avoid showing
+        the wrong region.
+        """
+        crop = self.image_mods.get('crop')
+        if crop is None or self.scaled_images_cache is None:
+            return
+        if self.rotation_index != 0:
+            self.image_mods['crop'] = None
+            print("Crop cleared: vertical flip while rotated can't be mirrored exactly.")
+            return
+        x, y, w, h = crop
+        full_h, full_w = self.scaled_images_cache.shape[:2]
+        new_y = full_h - (y + h)
+        self.image_mods['crop'] = (x, new_y, w, h)
 
     def grayscale(self):
         if self.image_mods['grayscale']:
@@ -3497,6 +3732,7 @@ class SessionDisplay(QWidget, Ui_session_display):
         self._abort_current_load = True  # Cancel previous load
         self.image_mods['scale_index'] = self.image_mods['default_scale_index']
         self.image_mods['contrast_level'] = 0  # Reset contrast for new image
+        self.image_mods['crop'] = None  # Reset crop for new image
 
         # Check if we are at the last image
         if self.playlist_position < len(self.playlist) - 1:
@@ -3528,6 +3764,7 @@ class SessionDisplay(QWidget, Ui_session_display):
 
         self.image_mods['scale_index'] = self.image_mods['default_scale_index']
         self.image_mods['contrast_level'] = 0  # Reset contrast for new image
+        self.image_mods['crop'] = None  # Reset crop for new image
 
         # Check if we are at the first image
         if self.playlist_position > 0:
