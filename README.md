@@ -31,10 +31,12 @@ This is a free tool to users can use to practice drawing using references from t
 	- 28.03.2025: Search function for the image presets.
 	- 07.04.2025: Added color labels to the image preset table.
 	- 18.04.2025: Renamed from session_drawing to Inkdrawing.
+	- 29.09.2025: Add images to current preset.
+	- 29.09.2025: Auto contrast.
+	- 09.10.2025: Update all presets option.
 	
-	- (New) 29.09.2025: Add images to current preset.
-	- (New) 29.09.2025: Auto contrast.
-	- (New) 09.10.2025: Update all presets option.
+	- (New) 07.07.2026: Added crop function [C].
+
 
 ##### Supported files :  .jpg, .jpeg, .png, .webp, .tiff, .jfif, .bmp
 
@@ -118,6 +120,7 @@ Rotate Right | Q, Ctrl + Mousewheel
 Rotate Left | F, Ctrl + Mousewheel
 Toggle grid | G
 Toggle grid settings | Ctrl + G
+Crop image | C
 Grayscale | T
 Flip Horizontal | H
 Flip Vertical | V
