@@ -2701,6 +2701,7 @@ class SessionDisplay(QWidget, Ui_session_display):
         self.grid_key.activated.connect(self.toggle_grid)
 
         self.crop_key = QtWidgets.QShortcut(QtGui.QKeySequence(self.shortcuts["session_window"]["crop"]), self)
+        self.crop_key.setAutoRepeat(False)  # Holding C should count as a single press, not repeat-toggle
         self.crop_key.activated.connect(self.toggle_crop_mode)
 
         self.zoom_in_key = QtWidgets.QShortcut(QtGui.QKeySequence(self.shortcuts["session_window"]["zoom_in"]), self)
