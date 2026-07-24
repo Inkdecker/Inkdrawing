@@ -91,7 +91,8 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
                 "mute": "M",
                 "add_30_seconds": "Up",
                 "add_60_seconds": "Ctrl+Up",
-                "restart_timer": "Ctrl+Shift+Up"
+                "restart_timer": "Ctrl+Shift+Up",
+                "undo_crop": "Ctrl+Z"
             }
         }
 
@@ -1294,6 +1295,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
         
         # Track statistics
         successful_updates = 0
+        skipped_unchanged = 0
         failed_updates = 0
         total_images = 0
         
@@ -1304,6 +1306,8 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
                 # Read existing file paths
                 with open(preset_path, 'r', encoding='utf-8') as f:
                     filepaths = [line.strip() for line in f if line.strip()]
+                
+                existing_filepaths = set(filepaths)
                 
                 # Collect image files from unique directories
                 unique_directories = {os.path.dirname(path) for path in filepaths 
@@ -1318,6 +1322,16 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
                                 updated_filepaths.add(file_path)
                     except PermissionError:
                         continue
+                
+                # Only rewrite the preset if the set of images actually changed
+                # (added or removed) - skip the write entirely otherwise.
+                if updated_filepaths == existing_filepaths:
+                    skipped_unchanged += 1
+                    total_images += len(existing_filepaths)
+                    
+                    if not is_gui:
+                        print(f'Unchanged, skipped: {preset_file} ({len(existing_filepaths)} images)')
+                    continue
                 
                 # Write updated file paths back to the preset
                 with open(preset_path, 'w', encoding='utf-8') as f:
@@ -1339,6 +1353,7 @@ class MainApp(QtWidgets.QMainWindow, Ui_MainWindow):
         summary_message = (
             f"Update Complete:\n"
             f"Successfully updated: {successful_updates} preset(s)\n"
+            f"Unchanged (skipped): {skipped_unchanged} preset(s)\n"
             f"Failed: {failed_updates} preset(s)\n"
             f"Total images: {total_images}"
         )
@@ -2731,7 +2746,8 @@ class SessionDisplay(QWidget, Ui_session_display):
         self.restart = QtWidgets.QShortcut(QtGui.QKeySequence(self.shortcuts["session_window"]["restart_timer"]), self)
         self.restart.activated.connect(self.restart_timer)
 
-
+        self.undo_crop_key = QtWidgets.QShortcut(QtGui.QKeySequence(self.shortcuts["session_window"].get("undo_crop", "Ctrl+Z")), self)
+        self.undo_crop_key.activated.connect(self.undo_crop)
 
 
     def closeEvent(self, event):
@@ -2884,6 +2900,18 @@ class SessionDisplay(QWidget, Ui_session_display):
         if self.image_mods.get('crop') is not None:
             self.image_mods['crop'] = None
             self.display_image(play_sound=False, update_status=False)
+
+    def undo_crop(self):
+            """Reset the crop modification and re-render the image."""
+            if self.image_mods.get('crop') is not None:
+                self.image_mods['crop'] = None
+                
+                # Using display_image to safely trigger a redraw without progressing the playlist
+                if hasattr(self, 'display_image'):
+                    self.display_image(play_sound=False, update_status=False)
+                
+                print("Crop undone.")
+
 
     def get_displayed_image_geometry(self):
         """

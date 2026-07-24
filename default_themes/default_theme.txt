@@ -21,7 +21,7 @@
     },
 
     "search_preset": {
-        "QLineEdit": "background: rgb(40, 40, 40); color: rgb(40, 40, 40); border: 1px solid rgb(60, 60, 60);;selection-background-color: rgb(153, 102, 51)",
+        "QLineEdit": "background: rgb(40, 40, 40); color: rgb(220, 220, 220); border: 1px solid rgb(60, 60, 60);;selection-background-color: rgb(153, 102, 51)",
         "QLineEdit:focus": "background: rgb(40, 40, 40); color: rgb(220, 220, 220); border: 1px solid rgb(100, 100, 100);selection-background-color: rgb(153, 102, 51);"
     },
 
@@ -49,7 +49,6 @@
         "QRadioButton::indicator": "width: 13px; height: 13px;",
         "QRadioButton::indicator:unchecked": "border: 2px solid rgb(80, 80, 80); border-radius: 7px; background: rgb(40, 40, 40);",
         "QRadioButton::indicator:checked": "border: 2px solid rgb(153, 102, 51); border-radius: 7px; background: qradialgradient(cx:0.5, cy:0.5, radius:1, fx:0.5, fy:0.5, stop:0 rgb(153, 102, 51), stop:0.3 rgb(153, 102, 51), stop:0.31 transparent);",
-
 
 
         "QListView, QTreeView": "background: rgb(40, 40, 40); color: rgb(220, 220, 220);border:none;",
